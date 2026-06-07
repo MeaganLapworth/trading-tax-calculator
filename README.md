@@ -14,7 +14,8 @@ taxed. This one does.
 
 ## Screenshot
 
-<!-- Drag and drop a screenshot of your calculator here after uploading -->
+<img width="866" height="1264" alt="Screenshot 2026-06-06 at 10 04 54 PM" src="https://github.com/user-attachments/assets/6934e4a4-ab87-4c72-98e9-f5dd4ddc7980" />
+<img width="896" height="1277" alt="Screenshot 2026-06-06 at 10 05 10 PM" src="https://github.com/user-attachments/assets/193aac89-0a7b-45c7-9839-41b89f59da55" />
 
 ---
 
