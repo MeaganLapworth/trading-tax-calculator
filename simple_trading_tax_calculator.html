@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Income Tax Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #080808;
+      --surface:      #111111;
+      --surface2:     #1a1a1a;
+      --surface3:     #222222;
+      --border:       rgba(255,255,255,0.07);
+      --border-md:    rgba(255,255,255,0.13);
+      --text:         #ededea;
+      --text-2:       #888882;
+      --text-3:       #444440;
+      --accent:       #c8f135;
+      --accent-dim:   rgba(200,241,53,0.12);
+      --accent-border:rgba(200,241,53,0.25);
+      --blue:         #5b9cf6;
+      --blue-bg:      rgba(91,156,246,0.1);
+      --blue-border:  rgba(91,156,246,0.2);
+      --green:        #3ecf96;
+      --green-bg:     rgba(62,207,150,0.1);
+      --green-border: rgba(62,207,150,0.2);
+      --amber:        #f0a840;
+      --amber-bg:     rgba(240,168,64,0.1);
+      --amber-border: rgba(240,168,64,0.2);
+      --purple:       #a78bfa;
+      --purple-bg:    rgba(167,139,250,0.1);
+      --purple-border:rgba(167,139,250,0.2);
+      --red:          #f87171;
+      --red-bg:       rgba(248,113,113,0.1);
+      --red-border:   rgba(248,113,113,0.2);
+      --radius:       8px;
+      --radius-lg:    12px;
+      --mono:         'DM Mono', monospace;
+      --sans:         'DM Sans', sans-serif;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2.5rem 1rem 5rem;
+    }
+
+    .page { max-width: 820px; margin: 0 auto; }
+
+    /* ── Field lock system ── */
+    .field { position: relative; }
+    .lock-btn {
+      position: absolute;
+      right: 0;
+      top: 0;
+      font-size: 11px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-3);
+      padding: 2px 3px;
+      line-height: 1;
+      transition: color 0.15s;
+      z-index: 2;
+    }
+    .lock-btn:hover { color: var(--amber); }
+    .field.locked .lock-btn { color: var(--amber); }
+    .field.locked input,
+    .field.locked select {
+      color: var(--text-3);
+      background: var(--surface);
+      border-color: var(--amber-border);
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+    .field.locked .pfx { color: var(--text-3); }
+
+    /* ── Header ── */
+    .header { margin-bottom: 2.5rem; }
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
+    }
+    h1 {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    h1 span { color: var(--accent); }
+    .year-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 1rem;
+    }
+    .save-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0.6rem 0.9rem;
+      background: var(--surface2);
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius);
+      font-size: 11px;
+      color: var(--text-2);
+    }
+    .save-bar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border-md);
+      background: var(--surface);
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.8; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-blue  { color: var(--blue);  border-color: var(--blue-border); }
+    .btn-red   { color: var(--red);   border-color: var(--red-border); }
+    .btn-accent{ color: var(--accent);border-color: var(--accent-border); }
+
+    /* ── Config row ── */
+    .config-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+    .config-field { display: flex; flex-direction: column; gap: 5px; }
+    .config-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-2);
+    }
+
+    /* ── Income cards ── */
+    .income-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .income-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      transition: border-color 0.2s;
+    }
+    .income-card:hover { border-color: var(--border-md); }
+    .income-card.prop   { border-top: 2px solid var(--amber); }
+    .income-card.stocks { border-top: 2px solid var(--blue); }
+    .income-card.futures{ border-top: 2px solid var(--purple); }
+    .income-card.rental { border-top: 2px solid var(--green); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .card-title.prop    { color: var(--amber); }
+    .card-title.stocks  { color: var(--blue); }
+    .card-title.futures { color: var(--purple); }
+    .card-title.rental  { color: var(--green); }
+
+    .card-form { display: flex; flex-direction: column; gap: 10px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label {
+      font-size: 11px;
+      color: var(--text-2);
+      letter-spacing: 0.02em;
+    }
+    .field .hint {
+      font-size: 10px;
+      color: var(--text-3);
+      line-height: 1.4;
+    }
+    .input-wrap { position: relative; }
+    .input-wrap .pfx {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text-3);
+      pointer-events: none;
+    }
+    input[type="number"], select {
+      width: 100%;
+      padding: 8px 10px;
+      font-family: var(--mono);
+      font-size: 13px;
+      background: var(--surface2);
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    input[type="number"]:focus, select:focus {
+      border-color: var(--accent);
+      background: var(--surface3);
+    }
+    .input-wrap input[type="number"] { padding-left: 22px; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"] { -moz-appearance: textfield; }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23444440' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 26px;
+      cursor: pointer;
+    }
+
+    /* tag pill on card */
+    .tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+    }
+    .tag.se   { background: var(--amber-bg);  color: var(--amber);  border: 1px solid var(--amber-border); }
+    .tag.cg   { background: var(--blue-bg);   color: var(--blue);   border: 1px solid var(--blue-border); }
+    .tag.sec  { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+    .tag.pass { background: var(--green-bg);  color: var(--green);  border: 1px solid var(--green-border); }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+
+    /* ── Prior-year payments paid section ── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin-bottom: 1rem;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    /* ── Results ── */
+    .results {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .source-breakdown {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 1.25rem;
+    }
+    .src-card {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      text-align: center;
+    }
+    .src-label { font-size: 10px; color: var(--text-3); margin-bottom: 4px; font-family: var(--mono); letter-spacing: 0.04em; }
+    .src-value { font-family: var(--mono); font-size: 1rem; font-weight: 500; }
+
+    .tax-rows { margin-bottom: 1.25rem; }
+    .tax-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tax-row:last-child { border-bottom: none; }
+    .tax-row .label { color: var(--text-2); }
+    .tax-row .val   { font-family: var(--mono); font-size: 13px; }
+    .tax-row.total .label { color: var(--text); font-weight: 600; font-size: 13px; }
+    .tax-row.total .val   { font-size: 15px; font-weight: 600; }
+    .tax-row.sub .label { color: var(--text-3); font-size: 11px; padding-left: 12px; }
+    .tax-row.sub .val   { color: var(--text-2); font-family: var(--mono); font-size: 11px; }
+
+    /* ── Quarterly schedule ── */
+    .qtr-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+    .qtr-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 0.65rem;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .qtr-card.next {
+      background: var(--blue-bg);
+      border: 1.5px solid var(--blue);
+    }
+    .qtr-card.past { opacity: 0.55; }
+    .qtr-label { font-family: var(--mono); font-size: 10px; color: var(--text-2); margin-bottom: 2px; letter-spacing: 0.05em; }
+    .qtr-date  { font-size: 10px; color: var(--text-3); margin-bottom: 8px; }
+    .qtr-fed   { font-family: var(--mono); font-size: 14px; color: var(--blue); margin-bottom: 1px; }
+    .qtr-state { font-family: var(--mono); font-size: 14px; color: var(--green); margin-bottom: 1px; }
+    .qtr-sep   { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+    .qtr-status{ font-size: 9px; font-weight: 600; margin-top: 4px; }
+    .qtr-status.ok   { color: var(--green); }
+    .qtr-status.warn { color: var(--amber); }
+    .qtr-status.bad  { color: var(--red); }
+    .qtr-status.next { color: var(--blue); }
+
+    .summary-banner {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 0.75rem;
+    }
+    .banner-card {
+      border-radius: var(--radius);
+      padding: 0.75rem 0.85rem;
+    }
+    .banner-card .b-label { font-size: 10px; margin-bottom: 4px; font-family: var(--mono); letter-spacing: 0.04em; }
+    .banner-card .b-val   { font-family: var(--mono); font-size: 1.2rem; font-weight: 500; }
+    .banner-card.next-due { background: var(--blue-bg);   border: 1px solid var(--blue-border); }
+    .banner-card.next-due .b-label { color: var(--blue); }
+    .banner-card.next-due .b-val   { color: var(--text); }
+    .banner-card.paid-card{ background: var(--green-bg);  border: 1px solid var(--green-border); }
+    .banner-card.paid-card .b-label{ color: var(--green); }
+    .banner-card.paid-card .b-val  { color: var(--green); }
+    .banner-card.remaining{ background: var(--amber-bg);  border: 1px solid var(--amber-border); }
+    .banner-card.remaining .b-label{ color: var(--amber); }
+    .banner-card.remaining .b-val  { color: var(--amber); }
+
+    .note {
+      font-size: 11px;
+      line-height: 1.65;
+      color: var(--text-2);
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 0.75rem 0.9rem;
+      margin-top: 0.6rem;
+    }
+    .note.blue   { border-left: 2px solid var(--blue); }
+    .note.green  { border-left: 2px solid var(--green); }
+    .note.amber  { border-left: 2px solid var(--amber); }
+    .note strong { color: var(--text); }
+
+    .disclaimer {
+      font-size: 11px;
+      color: var(--text-3);
+      text-align: center;
+      margin-top: 2rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 620px) {
+      .income-grid  { grid-template-columns: 1fr; }
+      .config-row   { grid-template-columns: 1fr; }
+      .source-breakdown { grid-template-columns: repeat(2,1fr); }
+      .qtr-grid     { grid-template-columns: repeat(2,1fr); }
+      .two-col, .three-col { grid-template-columns: 1fr; }
+      .summary-banner { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <h1>Trading Income<br><span>Tax Calculator</span></h1>
+      <span class="year-badge" id="yearBadge">TAX YEAR 2026</span>
+    </div>
+    <p class="subtitle">Prop firm · Futures &amp; stocks · Rental income — quarterly estimated tax planner</p>
+    <div class="save-bar">
+      <span id="saveStatus">○ No saved data</span>
+      <div class="save-bar-actions">
+        <span id="fetchStatus" style="font-size:10px;color:var(--text-3);"></span>
+        <button class="btn btn-blue"   onclick="fetchBrackets()">↻ Update brackets</button>
+        <button class="btn" id="lockAllBtn" onclick="toggleLockAll()" style="color:var(--amber);border-color:var(--amber-border);">🔓 Lock all fields</button>
+        <button class="btn btn-red"    onclick="clearSaved()">Clear saved data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config -->
+  <div class="config-row">
+    <div class="config-field">
+      <span class="config-label">Filing status</span>
+      <div class="field" id="f_filing">
+        <button class="lock-btn" onclick="toggleLock('f_filing')" title="Lock field">🔓</button>
+        <select id="filing" onchange="calc()">
+          <option value="single" selected>Single</option>
+          <option value="mfj">Married filing jointly</option>
+          <option value="mfs">Married filing separately</option>
+          <option value="hoh">Head of household</option>
+        </select>
+      </div>
+    </div>
+    <div class="config-field">
+      <span class="config-label">State of residence</span>
+      <div class="field" id="f_stateSelect">
+        <button class="lock-btn" onclick="toggleLock('f_stateSelect')" title="Lock field">🔓</button>
+        <select id="stateSelect" onchange="calc()">
+          <option value="AL">Alabama</option><option value="AK">Alaska</option>
+          <option value="AZ">Arizona</option><option value="AR">Arkansas</option>
+          <option value="CA">California</option><option value="CO">Colorado</option>
+          <option value="CT">Connecticut</option><option value="DE">Delaware</option>
+          <option value="FL">Florida</option><option value="GA">Georgia</option>
+          <option value="HI">Hawaii</option><option value="ID">Idaho</option>
+          <option value="IL">Illinois</option><option value="IN">Indiana</option>
+          <option value="IA">Iowa</option><option value="KS">Kansas</option>
+          <option value="KY">Kentucky</option><option value="LA">Louisiana</option>
+          <option value="ME">Maine</option><option value="MD">Maryland</option>
+          <option value="MA">Massachusetts</option><option value="MI">Michigan</option>
+          <option value="MN">Minnesota</option><option value="MS">Mississippi</option>
+          <option value="MO">Missouri</option><option value="MT">Montana</option>
+          <option value="NE">Nebraska</option><option value="NV">Nevada</option>
+          <option value="NH">New Hampshire</option><option value="NJ">New Jersey</option>
+          <option value="NM">New Mexico</option><option value="NY">New York</option>
+          <option value="NC">North Carolina</option><option value="ND">North Dakota</option>
+          <option value="OH">Ohio</option><option value="OK">Oklahoma</option>
+          <option value="OR" selected>Oregon</option><option value="PA">Pennsylvania</option>
+          <option value="RI">Rhode Island</option><option value="SC">South Carolina</option>
+          <option value="SD">South Dakota</option><option value="TN">Tennessee</option>
+          <option value="TX">Texas</option><option value="UT">Utah</option>
+          <option value="VT">Vermont</option><option value="VA">Virginia</option>
+          <option value="WA">Washington</option><option value="WV">West Virginia</option>
+          <option value="WI">Wisconsin</option><option value="WY">Wyoming</option>
+          <option value="DC">Washington D.C.</option>
+        </select>
+      </div>
+    </div>
+    <div class="config-field">
+      <span class="config-label">Prior year total tax paid</span>
+      <div class="field" id="f_priorTax">
+        <button class="lock-btn" onclick="toggleLock('f_priorTax')" title="Lock field">🔓</button>
+        <div class="input-wrap"><span class="pfx">$</span>
+          <input type="number" id="priorTax" value="0" min="0" oninput="calc()" /></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Income cards -->
+  <div class="income-grid">
+
+    <!-- Prop firm -->
+    <div class="income-card prop">
+      <div class="card-header">
+        <span class="card-title prop">Prop Firm</span>
+        <span class="tag se">1099-NEC · SE Income</span>
+      </div>
+      <div class="card-form">
+        <div class="field">
+          <label>Gross payouts (from broker / dashboard)</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="propPayouts" value="0" min="0" oninput="calc()" /></div>
+        </div>
+        <div class="field">
+          <label>Deductible expenses (challenge fees, PA fees, platform)</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="propExpenses" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">This year only — fees from prior years belong on prior return</span>
+        </div>
+        <hr class="divider">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:var(--text-2);">Net taxable (SE tax applies)</span>
+          <span id="propNetDisplay" style="font-family:var(--mono);font-size:13px;color:var(--amber);">$0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stocks -->
+    <div class="income-card stocks">
+      <div class="card-header">
+        <span class="card-title stocks">Stocks &amp; ETFs</span>
+        <span class="tag cg">Schedule D</span>
+      </div>
+      <div class="card-form">
+        <div class="field">
+          <label>Short-term net gain / loss (held &lt; 1 yr)</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="stNet" value="0" oninput="calc()" /></div>
+          <span class="hint">Negative for a loss. From broker P&amp;L or 1099-B.</span>
+        </div>
+        <div class="field">
+          <label>Long-term net gain / loss (held &gt; 1 yr)</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="ltNet" value="0" oninput="calc()" /></div>
+        </div>
+        <div class="field">
+          <label>Prior year stock loss carryforward</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="stockLossCarry" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">Positive number — applies ST first, then LT</span>
+        </div>
+        <hr class="divider">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:var(--text-2);">Net stock gain</span>
+          <span id="stockNetDisplay" style="font-family:var(--mono);font-size:13px;color:var(--blue);">$0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Futures -->
+    <div class="income-card futures">
+      <div class="card-header">
+        <span class="card-title futures">Futures</span>
+        <span class="tag sec">Form 6781 · 60/40</span>
+      </div>
+      <div class="card-form">
+        <div class="field">
+          <label>Futures net gain / loss (from broker or Form 6781)</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="futNet" value="0" oninput="calc()" /></div>
+          <span class="hint">Include mark-to-market open positions at Dec 31. Negative for a loss.</span>
+        </div>
+        <div class="field">
+          <label>Prior year Sec. 1256 loss carryforward</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="futLossCarry" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">Can also carry back 3 years via Form 1045</span>
+        </div>
+        <hr class="divider">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+          <div style="text-align:center;">
+            <div style="font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">LT (60%)</div>
+            <div id="futLTDisplay" style="font-family:var(--mono);font-size:12px;color:var(--purple);">$0</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">ST (40%)</div>
+            <div id="futSTDisplay" style="font-family:var(--mono);font-size:12px;color:var(--purple);">$0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rental -->
+    <div class="income-card rental">
+      <div class="card-header">
+        <span class="card-title rental">Rental Income</span>
+        <span class="tag pass">Schedule E</span>
+      </div>
+      <div class="card-form">
+        <div class="field">
+          <label>Gross rental income</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="rentalGross" value="0" min="0" oninput="calc()" /></div>
+        </div>
+        <div class="field">
+          <label>Rental expenses (mortgage interest, repairs, mgmt, depreciation)</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="rentalExpenses" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">Net rental income is passive — no SE tax applies</span>
+        </div>
+        <div class="field">
+          <label>Prior year passive loss carryforward</label>
+          <div class="input-wrap"><span class="pfx">$</span>
+            <input type="number" id="rentalLossCarry" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">From prior year Schedule E — passive losses offset passive income</span>
+        </div>
+        <hr class="divider">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:var(--text-2);">Net rental income</span>
+          <span id="rentalNetDisplay" style="font-family:var(--mono);font-size:13px;color:var(--green);">$0</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end income-grid -->
+
+  <!-- Estimated payments already made -->
+  <div class="section">
+    <p class="section-title">Estimated payments already made this year</p>
+
+    <!-- Column headers -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:6px;">
+      <div style="font-size:10px;font-family:var(--mono);color:var(--blue);letter-spacing:.05em;text-align:center;grid-column:1/3;border-bottom:1px solid var(--blue-border);padding-bottom:4px;">FEDERAL (IRS)</div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--green);letter-spacing:.05em;text-align:center;grid-column:3/5;border-bottom:1px solid var(--green-border);padding-bottom:4px;">STATE</div>
+    </div>
+
+    <!-- Row 1: Q1 + Q2 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="field">
+        <label>Q1 Federal (Apr 15)</label>
+        <div class="input-wrap"><span class="pfx">$</span><input type="number" id="paidQ1Fed" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label>Q2 Federal (Jun 16)</label>
+        <div class="input-wrap"><span class="pfx">$</span><input type="number" id="paidQ2Fed" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label>Q1 State (Apr 15)</label>
+        <div class="input-wrap"><span class="pfx">$</span><input type="number" id="paidQ1Or" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label>Q2 State (Jun 16)</label>
+        <div class="input-wrap"><span class="pfx">$</span><input type="number" id="paidQ2Or" value="0" min="0" oninput="calc()" /></div>
+      </div>
+    </div>
+
+    <!-- Row 2: Q3 + Q4 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+      <div class="field">
+        <label>Q3 Federal (Sep 15)</label>
+        <div class="input-wrap"><span class="pfx">$</span><input type="number" id="paidQ3Fed" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label>Q4 Federal (Jan 15)</label>
+        <div class="input-wrap"><span class="pfx">$</span><input type="number" id="paidQ4Fed" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label>Q3 State (Sep 15)</label>
+        <div class="input-wrap"><span class="pfx">$</span><input type="number" id="paidQ3Or" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label>Q4 State (Jan 15)</label>
+        <div class="input-wrap"><span class="pfx">$</span><input type="number" id="paidQ4Or" value="0" min="0" oninput="calc()" /></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results">
+    <p class="section-title">Tax breakdown</p>
+
+    <!-- Per-source summary -->
+    <div class="source-breakdown" id="sourceCards"></div>
+
+    <!-- Tax rows -->
+    <div class="tax-rows" id="taxRows"></div>
+  </div>
+
+  <!-- Quarterly schedule -->
+  <div class="results">
+    <p class="section-title">Quarterly payment schedule</p>
+    <div id="safeHarborNote"></div>
+    <div class="qtr-grid" id="qtrGrid"></div>
+    <div class="summary-banner" id="summaryBanner"></div>
+    <div id="stateNote"></div>
+    <div class="note blue" style="margin-top:0.6rem;">
+      <strong>Federal:</strong> Pay at IRS Direct Pay (irs.gov/payments) or EFTPS. Safe harbor = lesser of 90% of this year's tax or 100% of prior year tax (110% if prior AGI &gt; $150K).
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    This calculator provides estimates only and is not tax advice.<br>
+    Rental passive loss rules, depreciation recapture, and QBI deductions are not modeled — consult a CPA.<br>
+    Prop firm payouts are self-employment income (1099-NEC) — the 60/40 futures rule does not apply to them.
+  </div>
+
+</div><!-- end page -->
+
+<script>
+// ── Tax data (2026, updatable) ─────────────────────────────────────────────
+const TAX_KEY = 'simp_taxData_v1';
+let TD = {
+  year: 2026,
+  FED_BRACKETS: {
+    single: [[11600,.10],[47150,.12],[100525,.22],[191950,.24],[243725,.32],[609350,.35],[Infinity,.37]],
+    mfj:    [[23200,.10],[94300,.12],[201050,.22],[383900,.24],[487450,.32],[731200,.35],[Infinity,.37]],
+    mfs:    [[11600,.10],[47150,.12],[100525,.22],[191950,.24],[243725,.32],[365600,.35],[Infinity,.37]],
+    hoh:    [[16550,.10],[63100,.12],[100500,.22],[191950,.24],[243700,.32],[609350,.35],[Infinity,.37]]
+  },
+  FED_STD:    { single:16100, mfj:32200, mfs:16100, hoh:24300 },
+  LTCG_BRKT: {
+    single: [[47025,0],[518900,.15],[Infinity,.20]],
+    mfj:    [[94050,0],[583750,.15],[Infinity,.20]],
+    mfs:    [[47025,0],[291850,.15],[Infinity,.20]],
+    hoh:    [[63000,0],[551350,.15],[Infinity,.20]]
+  },
+  NIIT_THRESH: { single:200000, mfj:250000, mfs:125000, hoh:200000 },
+  SS_BASE: 176100
+};
+
+// Load saved brackets
+try {
+  const s = localStorage.getItem(TAX_KEY);
+  if (s) {
+    const p = JSON.parse(s);
+    ['FED_BRACKETS','LTCG_BRKT'].forEach(k => {
+      if (p[k]) Object.keys(p[k]).forEach(fs => {
+        p[k][fs] = p[k][fs].map(([t,r]) => [t >= 1e307 ? Infinity : t, r]);
+      });
+    });
+    TD = p;
+  }
+} catch(e){}
+
+// ── State data ─────────────────────────────────────────────────────────────
+const STATES = {
+  AL:{n:'Alabama',      brackets:{single:[[500,.02],[3000,.04],[Infinity,.05]],mfj:[[1000,.02],[6000,.04],[Infinity,.05]],mfs:[[500,.02],[3000,.04],[Infinity,.05]],hoh:[[500,.02],[3000,.04],[Infinity,.05]]},std:{single:3000,mfj:8500,mfs:3000,hoh:4700}},
+  AK:{n:'Alaska',       noTax:true},
+  AZ:{n:'Arizona',      flat:.025, std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  AR:{n:'Arkansas',     brackets:{single:[[5000,.02],[10000,.04],[Infinity,.047]],mfj:[[5000,.02],[10000,.04],[Infinity,.047]],mfs:[[5000,.02],[10000,.04],[Infinity,.047]],hoh:[[5000,.02],[10000,.04],[Infinity,.047]]},std:{single:2340,mfj:4680,mfs:2340,hoh:2340}},
+  CA:{n:'California',   brackets:{single:[[10756,.01],[25499,.02],[40245,.04],[54997,.06],[68350,.08],[349137,.093],[418961,.103],[698271,.113],[1000000,.123],[Infinity,.133]],mfj:[[21512,.01],[50998,.02],[80490,.04],[109994,.06],[136700,.08],[698274,.093],[837922,.103],[1000000,.113],[1396542,.123],[Infinity,.133]],mfs:[[10756,.01],[25499,.02],[40245,.04],[54997,.06],[68350,.08],[349137,.093],[418961,.103],[698271,.113],[1000000,.123],[Infinity,.133]],hoh:[[21527,.01],[51048,.02],[65744,.04],[81364,.06],[95509,.08],[487872,.093],[585481,.103],[975685,.113],[1000000,.123],[Infinity,.133]]},std:{single:5363,mfj:10726,mfs:5363,hoh:10726}},
+  CO:{n:'Colorado',     flat:.044, std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  CT:{n:'Connecticut',  brackets:{single:[[10000,.03],[50000,.05],[100000,.055],[200000,.06],[250000,.065],[500000,.069],[Infinity,.0699]],mfj:[[20000,.03],[100000,.05],[200000,.055],[400000,.06],[500000,.065],[1000000,.069],[Infinity,.0699]],mfs:[[10000,.03],[50000,.05],[100000,.055],[200000,.06],[250000,.065],[500000,.069],[Infinity,.0699]],hoh:[[16000,.03],[80000,.05],[160000,.055],[320000,.06],[400000,.065],[800000,.069],[Infinity,.0699]]},std:{single:0,mfj:0,mfs:0,hoh:0}},
+  DE:{n:'Delaware',     brackets:{single:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]],mfj:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]],mfs:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]],hoh:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]]},std:{single:3250,mfj:6500,mfs:3250,hoh:3250}},
+  FL:{n:'Florida',      noTax:true},
+  GA:{n:'Georgia',      flat:.0499,std:{single:12000,mfj:24000,mfs:12000,hoh:12000}},
+  HI:{n:'Hawaii',       brackets:{single:[[2400,.014],[4800,.032],[9600,.055],[14400,.064],[19200,.068],[24000,.072],[36000,.076],[48000,.079],[150000,.0825],[175000,.09],[200000,.1],[Infinity,.11]],mfj:[[4800,.014],[9600,.032],[19200,.055],[28800,.064],[38400,.068],[48000,.072],[72000,.076],[96000,.079],[300000,.0825],[350000,.09],[400000,.1],[Infinity,.11]],mfs:[[2400,.014],[4800,.032],[9600,.055],[14400,.064],[19200,.068],[24000,.072],[36000,.076],[48000,.079],[150000,.0825],[175000,.09],[200000,.1],[Infinity,.11]],hoh:[[3584,.014],[7168,.032],[14336,.055],[21504,.064],[28672,.068],[35840,.072],[53760,.076],[71680,.079],[225000,.0825],[262500,.09],[300000,.1],[Infinity,.11]]},std:{single:2200,mfj:4400,mfs:2200,hoh:3212}},
+  ID:{n:'Idaho',        flat:.058, std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  IL:{n:'Illinois',     flat:.0495,std:{single:0,mfj:0,mfs:0,hoh:0}},
+  IN:{n:'Indiana',      flat:.03,  std:{single:0,mfj:0,mfs:0,hoh:0}},
+  IA:{n:'Iowa',         flat:.038, std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  KS:{n:'Kansas',       brackets:{single:[[15000,.031],[30000,.0525],[Infinity,.057]],mfj:[[30000,.031],[60000,.0525],[Infinity,.057]],mfs:[[15000,.031],[30000,.0525],[Infinity,.057]],hoh:[[22500,.031],[45000,.0525],[Infinity,.057]]},std:{single:3500,mfj:8000,mfs:3500,hoh:6000}},
+  KY:{n:'Kentucky',     flat:.035, std:{single:3160,mfj:3160,mfs:3160,hoh:3160}},
+  LA:{n:'Louisiana',    flat:.03,  std:{single:12500,mfj:25000,mfs:12500,hoh:12500}},
+  ME:{n:'Maine',        brackets:{single:[[26050,0],[54450,.058],[127900,.0675],[Infinity,.0715]],mfj:[[52100,0],[108900,.058],[255800,.0675],[Infinity,.0715]],mfs:[[26050,0],[54450,.058],[127900,.0675],[Infinity,.0715]],hoh:[[39100,0],[81700,.058],[191850,.0675],[Infinity,.0715]]},std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  MD:{n:'Maryland',     brackets:{single:[[1000,.02],[2000,.03],[3000,.04],[100000,.0475],[125000,.05],[150000,.0525],[250000,.055],[Infinity,.065]],mfj:[[1000,.02],[2000,.03],[3000,.04],[150000,.0475],[175000,.05],[225000,.0525],[300000,.055],[Infinity,.065]],mfs:[[1000,.02],[2000,.03],[3000,.04],[100000,.0475],[125000,.05],[150000,.0525],[250000,.055],[Infinity,.065]],hoh:[[1000,.02],[2000,.03],[3000,.04],[125000,.0475],[150000,.05],[175000,.0525],[275000,.055],[Infinity,.065]]},std:{single:2600,mfj:5200,mfs:2600,hoh:2600}},
+  MA:{n:'Massachusetts',brackets:{single:[[1053750,.05],[Infinity,.09]],mfj:[[1053750,.05],[Infinity,.09]],mfs:[[1053750,.05],[Infinity,.09]],hoh:[[1053750,.05],[Infinity,.09]]},std:{single:0,mfj:0,mfs:0,hoh:0}},
+  MI:{n:'Michigan',     flat:.0425,std:{single:0,mfj:0,mfs:0,hoh:0}},
+  MN:{n:'Minnesota',    brackets:{single:[[31690,.0535],[103080,.068],[171220,.0785],[Infinity,.0985]],mfj:[[46330,.0535],[184040,.068],[304970,.0785],[Infinity,.0985]],mfs:[[23165,.0535],[92020,.068],[152485,.0785],[Infinity,.0985]],hoh:[[38900,.0535],[156570,.068],[254270,.0785],[Infinity,.0985]]},std:{single:14575,mfj:29150,mfs:14575,hoh:14575}},
+  MS:{n:'Mississippi',  brackets:{single:[[10000,0],[Infinity,.044]],mfj:[[10000,0],[Infinity,.044]],mfs:[[10000,0],[Infinity,.044]],hoh:[[10000,0],[Infinity,.044]]},std:{single:2300,mfj:4600,mfs:2300,hoh:3400}},
+  MO:{n:'Missouri',     brackets:{single:[[1273,0],[2546,.02],[3819,.025],[5092,.03],[6365,.035],[7638,.04],[8911,.045],[10184,.05],[Infinity,.048]],mfj:[[1273,0],[2546,.02],[3819,.025],[5092,.03],[6365,.035],[7638,.04],[8911,.045],[10184,.05],[Infinity,.048]],mfs:[[1273,0],[2546,.02],[3819,.025],[5092,.03],[6365,.035],[7638,.04],[8911,.045],[10184,.05],[Infinity,.048]],hoh:[[1273,0],[2546,.02],[3819,.025],[5092,.03],[6365,.035],[7638,.04],[8911,.045],[10184,.05],[Infinity,.048]]},std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  MT:{n:'Montana',      brackets:{single:[[3600,.01],[6300,.02],[9900,.03],[14100,.04],[18300,.05],[Infinity,.059]],mfj:[[7200,.01],[12600,.02],[19800,.03],[28200,.04],[36600,.05],[Infinity,.059]],mfs:[[3600,.01],[6300,.02],[9900,.03],[14100,.04],[18300,.05],[Infinity,.059]],hoh:[[3600,.01],[6300,.02],[9900,.03],[14100,.04],[18300,.05],[Infinity,.059]]},std:{single:5540,mfj:11080,mfs:5540,hoh:5540}},
+  NE:{n:'Nebraska',     brackets:{single:[[3700,.0246],[22170,.0351],[33180,.0501],[Infinity,.0455]],mfj:[[7390,.0246],[44330,.0351],[66360,.0501],[Infinity,.0455]],mfs:[[3700,.0246],[22170,.0351],[33180,.0501],[Infinity,.0455]],hoh:[[5550,.0246],[33260,.0351],[49770,.0501],[Infinity,.0455]]},std:{single:7900,mfj:15800,mfs:7900,hoh:7900}},
+  NV:{n:'Nevada',       noTax:true},
+  NH:{n:'New Hampshire',noTax:true},
+  NJ:{n:'New Jersey',   brackets:{single:[[20000,.014],[35000,.0175],[40000,.035],[75000,.05525],[500000,.0637],[Infinity,.1075]],mfj:[[20000,.014],[50000,.0175],[70000,.035],[80000,.05525],[150000,.0637],[500000,.0897],[Infinity,.1075]],mfs:[[20000,.014],[35000,.0175],[40000,.035],[75000,.05525],[500000,.0637],[Infinity,.1075]],hoh:[[20000,.014],[50000,.0175],[70000,.035],[80000,.05525],[150000,.0637],[500000,.0897],[Infinity,.1075]]},std:{single:0,mfj:0,mfs:0,hoh:0}},
+  NM:{n:'New Mexico',   brackets:{single:[[5500,.015],[11000,.032],[16000,.043],[210000,.049],[Infinity,.059]],mfj:[[8000,.015],[16000,.032],[24000,.043],[315000,.049],[Infinity,.059]],mfs:[[4000,.015],[8000,.032],[12000,.043],[157500,.049],[Infinity,.059]],hoh:[[8000,.015],[16000,.032],[24000,.043],[315000,.049],[Infinity,.059]]},std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  NY:{n:'New York',     brackets:{single:[[17150,.04],[23600,.045],[27900,.0525],[161550,.0585],[323200,.0625],[2155350,.0685],[5000000,.0965],[25000000,.103],[Infinity,.109]],mfj:[[27900,.04],[40000,.045],[83600,.0525],[323200,.0585],[2155350,.0625],[5000000,.0897],[25000000,.103],[Infinity,.109]],mfs:[[17150,.04],[23600,.045],[27900,.0525],[161550,.0585],[323200,.0625],[2155350,.0685],[5000000,.0965],[25000000,.103],[Infinity,.109]],hoh:[[17150,.04],[23600,.045],[27900,.0525],[161550,.0585],[323200,.0625],[2155350,.0685],[5000000,.0965],[25000000,.103],[Infinity,.109]]},std:{single:8000,mfj:16050,mfs:8000,hoh:11200}},
+  NC:{n:'North Carolina',flat:.0399,std:{single:12750,mfj:25500,mfs:12750,hoh:19125}},
+  ND:{n:'North Dakota', brackets:{single:[[50000,0],[Infinity,.025]],mfj:[[75000,0],[Infinity,.025]],mfs:[[50000,0],[Infinity,.025]],hoh:[[50000,0],[Infinity,.025]]},std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  OH:{n:'Ohio',         flat:.0275,std:{single:0,mfj:0,mfs:0,hoh:0}},
+  OK:{n:'Oklahoma',     brackets:{single:[[1000,.0025],[2500,.0075],[3750,.0175],[4900,.0275],[7200,.0375],[Infinity,.045]],mfj:[[2000,.0025],[5000,.0075],[7500,.0175],[9800,.0275],[14400,.0375],[Infinity,.045]],mfs:[[1000,.0025],[2500,.0075],[3750,.0175],[4900,.0275],[7200,.0375],[Infinity,.045]],hoh:[[1000,.0025],[2500,.0075],[3750,.0175],[4900,.0275],[7200,.0375],[Infinity,.045]]},std:{single:6350,mfj:12700,mfs:6350,hoh:9350}},
+  OR:{n:'Oregon',       brackets:{single:[[18400,.0475],[250000,.0675],[125000,.0875],[Infinity,.099]],mfj:[[18400,.0475],[250000,.0675],[250000,.0875],[Infinity,.099]],mfs:[[18400,.0475],[125000,.0675],[125000,.0875],[Infinity,.099]],hoh:[[18400,.0475],[250000,.0675],[125000,.0875],[Infinity,.099]]},std:{single:2420,mfj:4865,mfs:2420,hoh:4865}},
+  PA:{n:'Pennsylvania', flat:.0307,std:{single:0,mfj:0,mfs:0,hoh:0}},
+  RI:{n:'Rhode Island', brackets:{single:[[77450,.0375],[176050,.0475],[Infinity,.0599]],mfj:[[77450,.0375],[176050,.0475],[Infinity,.0599]],mfs:[[38725,.0375],[88025,.0475],[Infinity,.0599]],hoh:[[77450,.0375],[176050,.0475],[Infinity,.0599]]},std:{single:10550,mfj:21100,mfs:10550,hoh:10550}},
+  SC:{n:'South Carolina',brackets:{single:[[3460,0],[Infinity,.0521]],mfj:[[3460,0],[Infinity,.0521]],mfs:[[3460,0],[Infinity,.0521]],hoh:[[3460,0],[Infinity,.0521]]},std:{single:14600,mfj:29200,mfs:14600,hoh:21900}},
+  SD:{n:'South Dakota', noTax:true},
+  TN:{n:'Tennessee',    noTax:true},
+  TX:{n:'Texas',        noTax:true},
+  UT:{n:'Utah',         flat:.0445,std:{single:0,mfj:0,mfs:0,hoh:0}},
+  VT:{n:'Vermont',      brackets:{single:[[45400,.0335],[110050,.066],[229550,.076],[Infinity,.0875]],mfj:[[75850,.0335],[183500,.066],[279450,.076],[Infinity,.0875]],mfs:[[37925,.0335],[91750,.066],[139725,.076],[Infinity,.0875]],hoh:[[60850,.0335],[155700,.066],[229550,.076],[Infinity,.0875]]},std:{single:6500,mfj:13000,mfs:6500,hoh:6500}},
+  VA:{n:'Virginia',     brackets:{single:[[3000,.02],[5000,.03],[17000,.05],[Infinity,.0575]],mfj:[[3000,.02],[5000,.03],[17000,.05],[Infinity,.0575]],mfs:[[3000,.02],[5000,.03],[17000,.05],[Infinity,.0575]],hoh:[[3000,.02],[5000,.03],[17000,.05],[Infinity,.0575]]},std:{single:8000,mfj:16000,mfs:8000,hoh:8000}},
+  WA:{n:'Washington',   noTax:true},
+  WV:{n:'West Virginia',brackets:{single:[[10000,.0236],[25000,.0315],[Infinity,.0482]],mfj:[[10000,.0236],[25000,.0315],[Infinity,.0482]],mfs:[[10000,.0236],[25000,.0315],[Infinity,.0482]],hoh:[[10000,.0236],[25000,.0315],[Infinity,.0482]]},std:{single:0,mfj:0,mfs:0,hoh:0}},
+  WI:{n:'Wisconsin',    brackets:{single:[[14320,.0354],[28640,.0465],[315310,.053],[Infinity,.0765]],mfj:[[19090,.0354],[38190,.0465],[420420,.053],[Infinity,.0765]],mfs:[[14320,.0354],[28640,.0465],[315310,.053],[Infinity,.0765]],hoh:[[14320,.0354],[28640,.0465],[315310,.053],[Infinity,.0765]]},std:{single:12040,mfj:21820,mfs:12040,hoh:12040}},
+  WY:{n:'Wyoming',      noTax:true},
+  DC:{n:'Washington D.C.',brackets:{single:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[Infinity,.1075]],mfj:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[Infinity,.1075]],mfs:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[Infinity,.1075]],hoh:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[Infinity,.1075]]},std:{single:14600,mfj:29200,mfs:14600,hoh:21900}}
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function taxOn(income, brackets) {
+  let tax = 0, prev = 0;
+  for (const [top, rate] of brackets) {
+    if (income <= 0) break;
+    const chunk = Math.min(income, top - prev);
+    tax += chunk * rate;
+    prev = top; income -= chunk;
+  }
+  return tax;
+}
+
+function stateTax(key, filing, income) {
+  const s = STATES[key];
+  if (!s || s.noTax) return 0;
+  const std = s.std ? (s.std[filing] || 0) : 0;
+  const taxable = Math.max(0, income - std);
+  if (s.flat) return taxable * s.flat;
+  const brk = s.brackets?.[filing];
+  return brk ? taxOn(taxable, brk) : 0;
+}
+
+function fmt(n) {
+  const s = n < 0 ? '-' : '';
+  return s + '$' + Math.abs(Math.round(n)).toLocaleString();
+}
+
+function v(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
+
+// ── Main calculation ───────────────────────────────────────────────────────
+function calc() {
+  const yr      = new Date().getFullYear();
+  document.getElementById('yearBadge').textContent = `TAX YEAR ${yr}`;
+
+  const filing  = document.getElementById('filing').value;
+  const stateKey= document.getElementById('stateSelect').value;
+  const priorTax= v('priorTax');
+
+  // ── Prop firm (SE income) ──
+  const propGross   = v('propPayouts');
+  const propExp     = v('propExpenses');
+  const propNet     = Math.max(0, propGross - propExp);
+  const propSEBase  = propNet * 0.9235;
+  const propSETax   = propSEBase * 0.153;
+  const propSEDeduct= propSETax / 2;
+  document.getElementById('propNetDisplay').textContent = fmt(propNet);
+
+  // ── Stocks (Schedule D) ──
+  const stNet       = parseFloat(document.getElementById('stNet').value) || 0;
+  const ltNet       = parseFloat(document.getElementById('ltNet').value) || 0;
+  const stockCarry  = v('stockLossCarry');
+  const stockTotal  = stNet + ltNet;
+  const stockApplied= Math.min(stockCarry, Math.max(0, stockTotal));
+  const netST       = Math.max(0, stNet - Math.max(0, stockApplied - Math.max(0, ltNet)));
+  const netLT       = Math.max(0, ltNet - Math.max(0, stockApplied - Math.max(0, stNet)));
+  const stockNetLoss= Math.min(0, stockTotal - stockCarry);
+  const stockDeduct = Math.max(-3000, stockNetLoss);
+  document.getElementById('stockNetDisplay').textContent = fmt(netST + netLT + stockDeduct);
+
+  // ── Futures (IRC §1256 60/40) ──
+  const futRaw      = parseFloat(document.getElementById('futNet').value) || 0;
+  const futCarry    = v('futLossCarry');
+  const futAfter    = futRaw - futCarry;
+  const futLT       = futAfter * 0.60;
+  const futST       = futAfter * 0.40;
+  document.getElementById('futLTDisplay').textContent = fmt(Math.max(0, futLT));
+  document.getElementById('futSTDisplay').textContent = fmt(Math.max(0, futST));
+
+  // ── Rental income (Schedule E — passive, no SE tax) ──
+  const rentalGross = v('rentalGross');
+  const rentalExp   = v('rentalExpenses');
+  const rentalCarry = v('rentalLossCarry');
+  const rentalRaw   = rentalGross - rentalExp;
+  const rentalNet   = Math.max(0, rentalRaw - rentalCarry);
+  // Simple passive loss: rental losses generally can't offset other income
+  // (unless real estate professional status — noted in disclaimer)
+  const rentalNetLoss = Math.min(0, rentalRaw);
+  document.getElementById('rentalNetDisplay').textContent = fmt(rentalNet);
+
+  // ── Federal income tax ──
+  const totalSTGain = netST + Math.max(0, futST);
+  const totalLTGain = netLT + Math.max(0, futLT);
+  const ordinaryInc = totalSTGain + stockDeduct + propNet - propSEDeduct + rentalNet;
+  const taxableOrd  = Math.max(0, ordinaryInc - TD.FED_STD[filing]);
+  const fedOrdTax   = taxOn(taxableOrd, TD.FED_BRACKETS[filing]);
+  const ltcgTax     = taxOn(taxableOrd + totalLTGain, TD.LTCG_BRKT[filing])
+                    - taxOn(taxableOrd, TD.LTCG_BRKT[filing]);
+  const agi         = ordinaryInc + totalLTGain;
+  const niitBase    = Math.max(0, agi - TD.NIIT_THRESH[filing]);
+  const niit        = Math.min(Math.max(0, totalSTGain + totalLTGain + rentalNet), niitBase) * 0.038;
+  const totalFedTax = fedOrdTax + ltcgTax + niit;
+
+  // ── State income tax (all gains ordinary at state level) ──
+  const stateIncome = totalSTGain + totalLTGain + stockDeduct + propNet + rentalNet;
+  const stateTaxAmt = stateTax(stateKey, filing, stateIncome);
+  const stateNoTax  = !!(STATES[stateKey]?.noTax);
+  const stateName   = STATES[stateKey]?.n || stateKey;
+
+  // ── Safe harbor quarterly estimates ──
+  const priorFedSafe = priorTax > 150000 ? priorTax * 1.10 : priorTax;
+  const fedSH        = Math.max(totalFedTax * 0.90, priorFedSafe);
+  const propSESH     = propNet > 0 ? propSETax * 0.90 : 0;
+  const totalFedNeeded = fedSH + propSESH;
+  const stateSH      = stateNoTax ? 0 : Math.max(stateTaxAmt * 0.90, priorTax * 0.3); // rough prior-year state approx
+  const totalStateNeeded = stateNoTax ? 0 : stateSH;
+
+  // ── Per-quarter targets ──
+  const qFedTarget   = totalFedNeeded / 4;
+  const qStateTarget = totalStateNeeded / 4;
+
+  // ── Payments already made ──
+  const paidFed = [v('paidQ1Fed'),v('paidQ2Fed'),v('paidQ3Fed'),v('paidQ4Fed')];
+  const paidOr  = [v('paidQ1Or'), v('paidQ2Or'), v('paidQ3Or'), v('paidQ4Or')];
+  const qFedNet = paidFed.map(p => qFedTarget - p);
+  const qOrNet  = paidOr.map(p  => qStateTarget - p);
+
+  const today   = new Date();
+  const Q_DATES = [
+    {label:'Q1',period:'Jan – Mar',due:'Apr 15', dueDate: new Date(yr,3,15)},
+    {label:'Q2',period:'Apr – May',due:'Jun 16', dueDate: new Date(yr,5,16)},
+    {label:'Q3',period:'Jun – Aug',due:'Sep 15', dueDate: new Date(yr,8,15)},
+    {label:'Q4',period:'Sep – Dec',due:'Jan 15', dueDate: new Date(yr+1,0,15)}
+  ];
+  const nextIdx  = Q_DATES.findIndex(q => today <= q.dueDate);
+  const openCount= Q_DATES.filter(q => today <= q.dueDate).length;
+  const totalPaid= paidFed.reduce((a,b)=>a+b,0)+paidOr.reduce((a,b)=>a+b,0);
+  const totalNeeded = totalFedNeeded + totalStateNeeded;
+  const totalRemaining = Q_DATES.reduce((sum,q,i) =>
+    today <= q.dueDate ? sum + Math.max(0,qFedNet[i]) + Math.max(0,qOrNet[i]) : sum, 0);
+
+  // ── Render source cards ──
+  document.getElementById('sourceCards').innerHTML = `
+    <div class="src-card">
+      <div class="src-label" style="color:var(--amber);">PROP FIRM</div>
+      <div class="src-value" style="color:var(--amber);">${fmt(propNet)}</div>
+      <div style="font-size:9px;color:var(--text-3);margin-top:3px;">SE income</div>
+    </div>
+    <div class="src-card">
+      <div class="src-label" style="color:var(--blue);">STOCKS</div>
+      <div class="src-value" style="color:var(--blue);">${fmt(netST+netLT+stockDeduct)}</div>
+      <div style="font-size:9px;color:var(--text-3);margin-top:3px;">cap gains</div>
+    </div>
+    <div class="src-card">
+      <div class="src-label" style="color:var(--purple);">FUTURES</div>
+      <div class="src-value" style="color:var(--purple);">${fmt(futAfter)}</div>
+      <div style="font-size:9px;color:var(--text-3);margin-top:3px;">60/40 split</div>
+    </div>
+    <div class="src-card">
+      <div class="src-label" style="color:var(--green);">RENTAL</div>
+      <div class="src-value" style="color:var(--green);">${fmt(rentalNet)}</div>
+      <div style="font-size:9px;color:var(--text-3);margin-top:3px;">passive</div>
+    </div>
+  `;
+
+  // ── Render tax rows ──
+  const effRate = agi > 0 ? ((totalFedTax)/agi*100) : 0;
+  document.getElementById('taxRows').innerHTML = `
+    <div class="tax-row sub"><span class="label">Prop firm SE tax (15.3%)</span><span class="val" style="color:var(--amber);">${fmt(propSETax)}</span></div>
+    <div class="tax-row sub"><span class="label">SE tax deduction (½)</span><span class="val">–${fmt(propSEDeduct)}</span></div>
+    <div class="tax-row sub"><span class="label">Ordinary income tax</span><span class="val">${fmt(fedOrdTax)}</span></div>
+    <div class="tax-row sub"><span class="label">Long-term cap gains tax (stocks + futures LT)</span><span class="val">${fmt(ltcgTax)}</span></div>
+    <div class="tax-row sub"><span class="label">Net investment income tax (3.8%)</span><span class="val">${fmt(niit)}</span></div>
+    <div class="tax-row total"><span class="label">Total federal tax</span><span class="val" style="color:var(--blue);">${fmt(totalFedTax)}</span></div>
+    <div class="tax-row sub"><span class="label">${stateName} ${stateNoTax ? '(no income tax)' : 'income tax'}</span><span class="val" style="color:var(--green);">${stateNoTax ? '—' : fmt(stateTaxAmt)}</span></div>
+    <div class="tax-row total"><span class="label">Total all taxes</span><span class="val" style="color:var(--accent);">${fmt(totalFedTax + (stateNoTax?0:stateTaxAmt) + propSETax)}</span></div>
+    <div class="tax-row sub"><span class="label">Effective federal rate (on AGI)</span><span class="val">${effRate.toFixed(1)}%</span></div>
+    <div class="tax-row sub"><span class="label">AGI</span><span class="val">${fmt(agi)}</span></div>
+  `;
+
+  // ── Render quarterly grid ──
+  let gridHtml = '';
+  Q_DATES.forEach((q,i) => {
+    const isPast = today > q.dueDate;
+    const isNext = i === nextIdx;
+    const fedAmt = Math.max(0, qFedNet[i]);
+    const orAmt  = Math.max(0, qOrNet[i]);
+    const paidQ  = paidFed[i] + paidOr[i];
+    const netQ   = qFedNet[i] + qOrNet[i];
+    let statusHtml = '';
+    let cardClass  = 'qtr-card';
+    if (isPast) {
+      cardClass += ' past';
+      if (paidQ === 0) statusHtml = `<div class="qtr-status bad">⚠ no payment</div>`;
+      else if (netQ > 50) statusHtml = `<div class="qtr-status warn">under ${fmt(netQ)}</div>`;
+      else if (netQ < -50) statusHtml = `<div class="qtr-status ok">over ${fmt(Math.abs(netQ))}</div>`;
+      else statusHtml = `<div class="qtr-status ok">✓ covered</div>`;
+    } else if (isNext) {
+      cardClass += ' next';
+      statusHtml = `<div class="qtr-status next">⬆ due next</div>`;
+    }
+    gridHtml += `<div class="${cardClass}">
+      <div class="qtr-label">${q.label}</div>
+      <div class="qtr-date">${q.period} · ${q.due}</div>
+      ${isPast
+        ? `<div class="qtr-fed">${fmt(paidFed[i])}</div><div class="qtr-sep">fed paid</div>
+           <div class="qtr-state">${fmt(paidOr[i])}</div><div class="qtr-sep">state paid</div>`
+        : `<div class="qtr-fed">${fmt(fedAmt)}</div>
+           <div class="qtr-sep">federal${stateNoTax?'':''}</div>
+           <div class="qtr-state">${stateNoTax ? '—' : fmt(orAmt)}</div>
+           <div class="qtr-sep">${stateNoTax ? 'no state tax' : 'state'}</div>
+           ${paidQ > 0 ? `<div style="font-size:9px;color:var(--text-3);margin-top:3px;">paid ${fmt(paidQ)} of ${fmt(qFedTarget+qStateTarget)}</div>` : ''}`
+      }
+      ${statusHtml}
+    </div>`;
+  });
+  document.getElementById('qtrGrid').innerHTML = gridHtml;
+
+  // ── Summary banner ──
+  const nextQ = nextIdx >= 0 ? Q_DATES[nextIdx] : null;
+  const nextDue = nextQ ? Math.max(0,qFedNet[nextIdx]) + Math.max(0,qOrNet[nextIdx]) : 0;
+  document.getElementById('summaryBanner').innerHTML = `
+    <div class="banner-card next-due">
+      <div class="b-label">${nextQ ? `${nextQ.label} DUE ${nextQ.due}` : 'ALL COMPLETE'}</div>
+      <div class="b-val">${fmt(nextDue)}</div>
+    </div>
+    <div class="banner-card paid-card">
+      <div class="b-label">PAID SO FAR</div>
+      <div class="b-val">${fmt(totalPaid)}</div>
+    </div>
+    <div class="banner-card remaining">
+      <div class="b-label">STILL OWED (OPEN QTRS)</div>
+      <div class="b-val">${fmt(totalRemaining)}</div>
+    </div>
+  `;
+
+  // ── State note ──
+  const stEl = document.getElementById('stateNote');
+  stEl.innerHTML = stateNoTax
+    ? `<div class="note" style="border-left:2px solid var(--text-3);margin-top:.5rem;">${stateName} has no state income tax — state quarterly column shows —</div>`
+    : `<div class="note green" style="margin-top:.5rem;"><strong>${stateName} state tax:</strong> All income streams taxed as ordinary income at the state level. The 60/40 futures rule and preferential LT rates apply federally only. Pay at your state's revenue portal.</div>`;
+
+  // ── Safe harbor note ──
+  const shEl = document.getElementById('safeHarborNote');
+  shEl.innerHTML = priorTax > 0 && totalFedNeeded > totalFedTax * 0.90
+    ? `<div class="note amber" style="margin-bottom:.75rem;"><strong>Safe harbor active:</strong> Prior year tax of ${fmt(priorTax)} is driving quarterly estimates above this year's projected tax. This is correct IRS behavior — paying 100% of prior year tax avoids underpayment penalties. Set prior year tax to $0 to use the 90% current-year method instead.</div>`
+    : '';
+
+  saveValues();
+}
+
+// ── Persistence ────────────────────────────────────────────────────────────
+const STORE_KEY = 'simp_dtCalc_v1';
+const FIELDS = [
+  'filing','stateSelect','priorTax',
+  'propPayouts','propExpenses',
+  'stNet','ltNet','stockLossCarry',
+  'futNet','futLossCarry',
+  'rentalGross','rentalExpenses','rentalLossCarry',
+  'paidQ1Fed','paidQ2Fed','paidQ3Fed','paidQ4Fed',
+  'paidQ1Or','paidQ2Or','paidQ3Or','paidQ4Or'
+];
+
+function saveValues() {
+  const data = {};
+  FIELDS.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
+  data._savedAt = new Date().toISOString();
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch(e){}
+  updateSaveStatus(data._savedAt);
+}
+
+function loadValues() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) { updateSaveStatus(null); return; }
+    const data = JSON.parse(raw);
+    FIELDS.forEach(id => { const el = document.getElementById(id); if (el && data[id] !== undefined) el.value = data[id]; });
+    updateSaveStatus(data._savedAt);
+  } catch(e) { updateSaveStatus(null); }
+}
+
+function clearSaved() {
+  if (!confirm('Clear all saved values and reset the form?')) return;
+  localStorage.removeItem(STORE_KEY);
+  localStorage.removeItem(LOCK_KEY);
+  lockedFields.clear();
+  FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'SELECT') { el.value = id === 'stateSelect' ? 'OR' : 'single'; }
+    else el.value = '0';
+  });
+  applyLocks();
+  updateSaveStatus(null);
+  calc();
+}
+
+function updateSaveStatus(iso) {
+  const el = document.getElementById('saveStatus');
+  if (!iso) { el.textContent = '○ No saved data'; el.style.color = 'var(--text-3)'; return; }
+  const d = new Date(iso);
+  const s = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+          + ' at ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  el.textContent = `✓ Saved ${s}`;
+  el.style.color = 'var(--green)';
+}
+
+// ── Fetch updated brackets ─────────────────────────────────────────────────
+async function fetchBrackets() {
+  const btn = document.getElementById('fetchStatus');
+  const bEl = document.querySelector('[onclick="fetchBrackets()"]');
+  if (bEl) { bEl.disabled = true; bEl.textContent = '⟳ Fetching…'; }
+  if (btn) { btn.textContent = ''; }
+  try {
+    const yr = new Date().getFullYear();
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:2000,
+        messages:[{ role:'user', content:`Return ONLY a JSON object (no markdown) with IRS tax data for ${yr}:
+{"year":${yr},"FED_BRACKETS":{"single":[[n,r],...,[1e308,0.37]],"mfj":[[n,r],...,[1e308,0.37]],"mfs":[[n,r],...,[1e308,0.37]],"hoh":[[n,r],...,[1e308,0.37]]},"FED_STD":{"single":n,"mfj":n,"mfs":n,"hoh":n},"LTCG_BRKT":{"single":[[n,0],[n,0.15],[1e308,0.20]],"mfj":[[n,0],[n,0.15],[1e308,0.20]],"mfs":[[n,0],[n,0.15],[1e308,0.20]],"hoh":[[n,0],[n,0.15],[1e308,0.20]]},"NIIT_THRESH":{"single":n,"mfj":n,"mfs":n,"hoh":n},"SS_BASE":n}` }]
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const text = (data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(text);
+    if (!parsed.FED_BRACKETS?.single) throw new Error('bad shape');
+    ['FED_BRACKETS','LTCG_BRKT'].forEach(k => {
+      if (parsed[k]) Object.keys(parsed[k]).forEach(fs => {
+        parsed[k][fs] = parsed[k][fs].map(([t,r]) => [t>=1e307?Infinity:t,r]);
+      });
+    });
+    TD = parsed;
+    const toStore = JSON.parse(JSON.stringify(parsed,(k,v)=>v===Infinity?1e308:v));
+    localStorage.setItem(TAX_KEY, JSON.stringify(toStore));
+    if (btn) { btn.textContent = `✓ Updated to ${yr}`; btn.style.color = 'var(--green)'; }
+    calc();
+  } catch(err) {
+    if (btn) { btn.textContent = '⚠ Fetch failed'; btn.style.color = 'var(--amber)'; }
+    console.error(err);
+  } finally {
+    if (bEl) { bEl.disabled = false; bEl.textContent = '↻ Update brackets'; }
+  }
+}
+
+// ── Lock / Unlock system ───────────────────────────────────────────────────
+const LOCK_KEY = 'simp_locks_v1';
+let lockedFields = new Set();
+
+function toggleLock(fieldId) {
+  if (lockedFields.has(fieldId)) {
+    lockedFields.delete(fieldId);
+  } else {
+    lockedFields.add(fieldId);
+  }
+  applyLocks();
+  saveLocks();
+}
+
+function applyLocks() {
+  document.querySelectorAll('.field[id]').forEach(f => {
+    const isLocked = lockedFields.has(f.id);
+    f.classList.toggle('locked', isLocked);
+    const btn = f.querySelector('.lock-btn');
+    if (btn) btn.textContent = isLocked ? '🔒' : '🔓';
+    // Actually set readonly/disabled on inputs inside
+    f.querySelectorAll('input[type="number"]').forEach(inp => {
+      inp.readOnly = isLocked;
+    });
+    f.querySelectorAll('select').forEach(sel => {
+      sel.disabled = isLocked;
+    });
+  });
+  // Update lock-all button label
+  const allFields = document.querySelectorAll('.field[id]');
+  const allLocked = [...allFields].every(f => lockedFields.has(f.id));
+  const btn = document.getElementById('lockAllBtn');
+  if (btn) btn.textContent = allLocked ? '🔒 Unlock all fields' : '🔓 Lock all fields';
+}
+
+function toggleLockAll() {
+  const allFields = document.querySelectorAll('.field[id]');
+  const allLocked = [...allFields].every(f => lockedFields.has(f.id));
+  if (allLocked) {
+    lockedFields.clear();
+  } else {
+    allFields.forEach(f => lockedFields.add(f.id));
+  }
+  applyLocks();
+  saveLocks();
+}
+
+function saveLocks() {
+  try { localStorage.setItem(LOCK_KEY, JSON.stringify([...lockedFields])); } catch(e){}
+}
+
+function loadLocks() {
+  try {
+    const s = localStorage.getItem(LOCK_KEY);
+    if (s) lockedFields = new Set(JSON.parse(s));
+  } catch(e){}
+  applyLocks();
+}
+
+// Auto-inject lock buttons into every .field that has an id but no lock-btn yet
+function injectLockButtons() {
+  document.querySelectorAll('.field[id]').forEach(f => {
+    if (!f.querySelector('.lock-btn')) {
+      const btn = document.createElement('button');
+      btn.className = 'lock-btn';
+      btn.title = 'Lock field';
+      btn.textContent = '🔓';
+      btn.setAttribute('onclick', `toggleLock('${f.id}')`);
+      f.prepend(btn);
+    }
+  });
+}
+
+// Auto-wrap any bare input-wrap or select that isn't already inside a .field[id]
+function autoWrapFields() {
+  // Find all input-wrap divs not already in a .field with an id
+  document.querySelectorAll('.input-wrap').forEach((wrap, i) => {
+    const parent = wrap.parentElement;
+    if (parent.classList.contains('field') && parent.id) return; // already wrapped
+    if (parent.classList.contains('field') && !parent.id) {
+      // Give it an id
+      const inp = wrap.querySelector('input');
+      parent.id = inp ? `f_${inp.id}` : `f_autowrap_${i}`;
+    }
+  });
+  // Same for selects not already in a .field[id]
+  document.querySelectorAll('select').forEach((sel, i) => {
+    const parent = sel.parentElement;
+    if (parent.classList.contains('field') && parent.id) return;
+    if (parent.classList.contains('field') && !parent.id) {
+      parent.id = `f_${sel.id || 'sel_' + i}`;
+    }
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadValues();
+autoWrapFields();
+injectLockButtons();
+loadLocks();
+calc();
+</script>
+</body>
+</html>
