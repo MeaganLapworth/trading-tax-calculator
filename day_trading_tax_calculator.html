@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day Trading Tax Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0a0a0a;
+      --surface:     #141414;
+      --surface2:    #1e1e1e;
+      --border:      rgba(255,255,255,0.08);
+      --border-md:   rgba(255,255,255,0.15);
+      --text:        #f0ede8;
+      --text-2:      #a09b94;
+      --text-3:      #5a5650;
+      --blue-bg:     #0d2a45;
+      --blue-text:   #60a8e8;
+      --green-bg:    #0d2a1e;
+      --green-text:  #3ecf96;
+      --amber-bg:    #2a1a04;
+      --amber-text:  #f0a840;
+      --purple-bg:   #1a1535;
+      --purple-text: #a89cf0;
+      --red-bg:      #2a0d0d;
+      --red-text:    #f07070;
+      --radius:      10px;
+      --radius-lg:   14px;
+    }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .page-wrap { max-width: 860px; margin: 0 auto; }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-md);
+      padding-bottom: 1.25rem;
+    }
+    header h1 {
+      font-size: 1.7rem;
+      font-weight: normal;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      font-size: 0.9rem;
+      color: var(--text-2);
+      margin-top: 0.4rem;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 20px;
+      margin-right: 6px;
+    }
+    .badge.fed  { background: var(--blue-bg);   color: var(--blue-text); }
+    .badge.or   { background: var(--green-bg);  color: var(--green-text); }
+    .badge.fica { background: var(--purple-bg); color: var(--purple-text); }
+
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .section-title {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 1.25rem;
+    }
+
+    .subsection-title {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-2);
+      margin: 1.25rem 0 0.75rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .subsection-title.first { margin-top: 0; padding-top: 0; border-top: none; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+    .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+
+    .field { display: flex; flex-direction: column; gap: 5px; position: relative; }
+
+    /* ── Field lock system ── */
+    .lock-btn {
+      position: absolute;
+      right: 0;
+      top: 0;
+      font-size: 11px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-3);
+      padding: 1px 2px;
+      line-height: 1;
+      transition: color 0.15s;
+      z-index: 2;
+    }
+    .lock-btn:hover { color: var(--amber-text); }
+    .field.locked .lock-btn { color: var(--amber-text); }
+    .field.locked input[type="number"],
+    .field.locked select {
+      color: var(--text-3);
+      background: var(--surface);
+      border-color: rgba(240,168,64,0.3);
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+    .field.locked .prefix { color: var(--text-3); }
+    .field label {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+    .field .hint {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: var(--text-3);
+      line-height: 1.4;
+    }
+
+    .input-wrap { position: relative; }
+    .input-wrap .prefix {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-3);
+      font-size: 14px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      pointer-events: none;
+    }
+
+    input[type="number"], select {
+      width: 100%;
+      padding: 9px 10px;
+      font-size: 14px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: var(--surface2);
+      border: 1px solid var(--border-md);
+      border-radius: var(--radius);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    input[type="number"]:focus, select:focus {
+      border-color: #60a8e8;
+      background: #222;
+    }
+    .input-wrap input[type="number"] { padding-left: 22px; }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235a5650' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+      cursor: pointer;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"] { -moz-appearance: textfield; }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .metric {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 0.9rem 1rem;
+    }
+    .metric .m-label { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; color: var(--text-3); margin-bottom: 5px; }
+    .metric .m-value { font-size: 1.2rem; font-weight: normal; color: var(--text); letter-spacing: -0.02em; }
+    .metric.blue   { background: var(--blue-bg); }
+    .metric.blue   .m-value { color: var(--blue-text); }
+    .metric.green  { background: var(--green-bg); }
+    .metric.green  .m-value { color: var(--green-text); }
+    .metric.amber  { background: var(--amber-bg); }
+    .metric.amber  .m-value { color: var(--amber-text); }
+    .metric.purple { background: var(--purple-bg); }
+    .metric.purple .m-value { color: var(--purple-text); }
+
+    .two-col   { display: grid; grid-template-columns: 1fr 1fr;         gap: 1.5rem; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr;     gap: 1.25rem; }
+
+    .col-head {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+    .col-head.fed  { color: var(--blue-text); }
+    .col-head.or   { color: var(--green-text); }
+    .col-head.fica { color: var(--purple-text); }
+
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .breakdown-row:last-child { border-bottom: none; font-weight: 600; font-size: 14px; }
+    .breakdown-row span:first-child { color: var(--text-2); }
+    .breakdown-row.sub span { color: var(--text-3) !important; font-size: 12px !important; font-weight: normal !important; }
+
+    .due-dates {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+    .due-date {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 0.75rem;
+      text-align: center;
+    }
+    .due-date .d-qtr  { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 600; color: var(--text-2); letter-spacing: 0.04em; }
+    .due-date .d-date { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; color: var(--text-3); margin: 3px 0 10px; }
+    .due-date .d-fed  { font-size: 1rem; color: var(--blue-text); margin-bottom: 1px; }
+    .due-date .d-sep  { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+    .due-date .d-state { font-size: 1rem; color: var(--green-text); margin-bottom: 1px; }
+
+    .total-banner {
+      background: var(--text);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .total-banner .tb-label  { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; color: rgba(255,255,255,0.65); }
+    .total-banner .tb-amount { font-size: 1.5rem; letter-spacing: -0.03em; }
+
+    .note {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--text-2);
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .note.fed-note  { border-left: 3px solid #378ADD; }
+    .note.or-note   { border-left: 3px solid #1D9E75; }
+    .note.fica-note { border-left: 3px solid #7F77DD; }
+    .note strong { color: var(--text); font-weight: 600; }
+
+    .alert-box {
+      background: var(--purple-bg);
+      border: 1px solid rgba(168,156,240,0.25);
+      border-radius: var(--radius);
+      padding: 0.65rem 0.9rem;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      color: var(--purple-text);
+      margin-top: 0.6rem;
+    }
+    .alert-box strong { font-weight: 600; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+
+    .disclaimer {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: var(--text-3);
+      text-align: center;
+      margin-top: 2rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 660px) {
+      .field-row, .field-row.three, .two-col, .three-col { grid-template-columns: 1fr; }
+      .due-dates { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <header>
+    <h1>Day Trading Tax Calculator</h1>
+    <p>
+      <span class="badge fed">Federal</span>
+      <span class="badge or">State</span>
+      <span class="badge fica">SS &amp; Medicare</span>
+      Quarterly estimated tax estimator &mdash; tax year <span id="taxYearLabel"></span> &mdash; brackets: <span id="bracketYearLabel"></span>
+    </p>
+    <div id="saveBar" style="display:flex;align-items:center;justify-content:space-between;
+         margin-top:0.85rem;padding:0.6rem 0.9rem;background:var(--surface2);
+         border:1px solid var(--border-md);border-radius:var(--radius);
+         font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--text-2);">
+      <span id="saveStatus">&#9679; No saved data</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span id="taxFetchStatus" style="font-size:11px;color:var(--text-3);"></span>
+        <button onclick="fetchTaxBrackets()" id="taxFetchBtn"
+          style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;
+          padding:4px 10px;border-radius:6px;border:1px solid var(--border-md);
+          background:var(--surface);color:var(--blue-text);cursor:pointer;">
+          ↻ Update brackets
+        </button>
+        <button onclick="toggleLockAll()" id="lockAllBtn"
+          style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;
+          padding:4px 10px;border-radius:6px;border:1px solid rgba(240,168,64,0.3);
+          background:var(--surface);color:var(--amber-text);cursor:pointer;">
+          🔓 Lock all fields
+        </button>
+        <button onclick="clearSaved()" id="btnClear"
+          style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;
+          padding:4px 10px;border-radius:6px;border:1px solid var(--border-md);
+          background:var(--surface);color:var(--red-text);cursor:pointer;">
+          Clear saved data
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- SECTION 1: Your Situation -->
+  <div class="section">
+    <p class="section-title">Your situation</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="filing">Filing status</label>
+        <select id="filing" onchange="calc()">
+          <option value="single" selected>Single</option>
+          <option value="mfj">Married filing jointly</option>
+          <option value="mfs">Married filing separately</option>
+          <option value="hoh">Head of household</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="otherIncome">W-2 wages / other earned income</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="otherIncome" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Wages subject to SS &amp; Medicare withholding</span>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="fedWithheld">Federal income tax withheld (W-2 box 2)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="fedWithheld" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label for="stateSelect">State of residence</label>
+        <select id="stateSelect" onchange="calc()">
+          <option value="AL">Alabama</option>
+          <option value="AK">Alaska</option>
+          <option value="AZ">Arizona</option>
+          <option value="AR">Arkansas</option>
+          <option value="CA">California</option>
+          <option value="CO">Colorado</option>
+          <option value="CT">Connecticut</option>
+          <option value="DE">Delaware</option>
+          <option value="FL">Florida</option>
+          <option value="GA">Georgia</option>
+          <option value="HI">Hawaii</option>
+          <option value="ID">Idaho</option>
+          <option value="IL">Illinois</option>
+          <option value="IN">Indiana</option>
+          <option value="IA">Iowa</option>
+          <option value="KS">Kansas</option>
+          <option value="KY">Kentucky</option>
+          <option value="LA">Louisiana</option>
+          <option value="ME">Maine</option>
+          <option value="MD">Maryland</option>
+          <option value="MA">Massachusetts</option>
+          <option value="MI">Michigan</option>
+          <option value="MN">Minnesota</option>
+          <option value="MS">Mississippi</option>
+          <option value="MO">Missouri</option>
+          <option value="MT">Montana</option>
+          <option value="NE">Nebraska</option>
+          <option value="NV">Nevada</option>
+          <option value="NH">New Hampshire</option>
+          <option value="NJ">New Jersey</option>
+          <option value="NM">New Mexico</option>
+          <option value="NY">New York</option>
+          <option value="NC">North Carolina</option>
+          <option value="ND">North Dakota</option>
+          <option value="OH">Ohio</option>
+          <option value="OK">Oklahoma</option>
+          <option value="OR" selected>Oregon</option>
+          <option value="PA">Pennsylvania</option>
+          <option value="RI">Rhode Island</option>
+          <option value="SC">South Carolina</option>
+          <option value="SD">South Dakota</option>
+          <option value="TN">Tennessee</option>
+          <option value="TX">Texas</option>
+          <option value="UT">Utah</option>
+          <option value="VT">Vermont</option>
+          <option value="VA">Virginia</option>
+          <option value="WA">Washington</option>
+          <option value="WV">West Virginia</option>
+          <option value="WI">Wisconsin</option>
+          <option value="WY">Wyoming</option>
+          <option value="DC">Washington D.C.</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field" id="stateWithheldField">
+        <label for="stateWithheld" id="stateWithheldLabel">State income tax withheld (W-2 box 17)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="stateWithheld" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field" id="stateNoteField" style="display:none;">
+        <div id="stateNoTaxNote" style="background:var(--surface2);border:1px solid var(--border);
+             border-radius:var(--radius);padding:0.65rem 0.85rem;margin-top:1.25rem;
+             font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--text-3);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Prop Firm Income (1099-NEC) -->
+  <div class="section">
+    <p class="section-title">Prop firm income &mdash; Schedule C</p>
+    <div style="background:var(--amber-bg);border:1px solid rgba(240,168,64,0.2);border-radius:var(--radius);padding:0.65rem 0.9rem;
+         margin-bottom:1rem;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;
+         color:var(--amber-text);line-height:1.6;">
+      <strong>Important:</strong> Prop firm payouts (e.g. Apex Trader Funding) are
+      <strong>self-employment income</strong> reported on Form 1099-NEC — not capital gains.
+      They are taxed as ordinary income <em>plus</em> 15.3% self-employment tax (SS + Medicare).
+      The 60/40 futures rule does <em>not</em> apply to prop firm payouts.
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="propPayouts">Total prop firm payouts (1099-NEC)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="propPayouts" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Total gross payouts received this year — from your Apex dashboard or 1099-NEC</span>
+      </div>
+      <div class="field">
+        <label for="propExpenses">Deductible prop firm expenses</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="propExpenses" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Challenge fees (this year only), monthly PA fees, platform/data subscriptions</span>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="priorPropTax">Prior year Schedule C net profit (for safe harbor)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="priorPropTax" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Last year&rsquo;s Schedule C line 31 — used to calculate safe harbor SE tax</span>
+      </div>
+      <div class="field">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:0.65rem 0.85rem;margin-top:1.25rem;
+             font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--text-2);line-height:1.6;">
+          <strong style="color:var(--text);">Note on challenge fee timing:</strong><br>
+          Deduct fees in the <em>year you paid them</em> (cash basis). Fees paid last year
+          belong on last year&rsquo;s return. File Form 1040-X to amend if needed.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2b: Self-Employment / Business Income -->
+  <div class="section">
+    <p class="section-title">Self-employment &amp; business income</p>
+
+    <!-- Not-supported note -->
+    <div class="note" style="border-left:3px solid var(--text-3);margin-bottom:1rem;">
+      <strong style="color:var(--text);">Supported structures:</strong> Sole proprietor &amp; single-member LLC (Schedule C) and S-Corporation (W-2 salary + pass-through distributions).<br>
+      <span style="color:var(--text-3);">
+        <strong>Not included — too complex for this calculator:</strong>
+        C-Corporation (double taxation at corporate + personal level, separate Form 1120 quarterly estimates, fundamentally different tax universe) and
+        Multi-member LLC / partnerships (Form 1065 &amp; K-1 timing, basis tracking, guaranteed payments, varying state treatment).
+        If your business uses either of these structures, your CPA should be handling those quarterly estimates separately.
+      </span>
+    </div>
+
+    <!-- Entity type selector -->
+    <div class="field-row">
+      <div class="field">
+        <label for="bizStructure">Business structure</label>
+        <select id="bizStructure" onchange="toggleBizFields();calc()">
+          <option value="none" selected>None / not applicable</option>
+          <option value="soleProp">Sole proprietor or single-member LLC (Schedule C)</option>
+          <option value="scorp">S-Corporation</option>
+        </select>
+      </div>
+      <div class="field" id="bizExpensesField" style="display:none;">
+        <label for="bizExpenses">Deductible business expenses</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="bizExpenses" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Ordinary &amp; necessary business expenses — Schedule C line 28</span>
+      </div>
+    </div>
+
+    <!-- Sole Prop fields -->
+    <div id="solePropFields" style="display:none;">
+      <div class="field-row">
+        <div class="field">
+          <label for="bizGrossIncome">Gross business revenue / income</label>
+          <div class="input-wrap"><span class="prefix">$</span>
+            <input type="number" id="bizGrossIncome" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">Total revenue before expenses — Schedule C line 7</span>
+        </div>
+        <div class="field">
+          <label for="priorBizProfit">Prior year Schedule C net profit (safe harbor)</label>
+          <div class="input-wrap"><span class="prefix">$</span>
+            <input type="number" id="priorBizProfit" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">Last year&rsquo;s Schedule C line 31</span>
+        </div>
+      </div>
+      <div class="note" style="border-left:3px solid var(--purple-text);margin-top:0.5rem;">
+        <strong>Sole prop / single-member LLC:</strong> Net profit (revenue minus expenses) flows directly
+        to your personal return. The full net amount is subject to <strong>15.3% SE tax</strong> plus
+        ordinary income tax. Half of the SE tax is deductible above-the-line. No payroll setup required,
+        but SE tax burden is higher than an S-Corp for most profitable businesses.
+      </div>
+    </div>
+
+    <!-- S-Corp fields -->
+    <div id="scorpFields" style="display:none;">
+      <div class="field-row">
+        <div class="field">
+          <label for="scorpSalary">S-Corp reasonable salary (W-2 from your S-Corp)</label>
+          <div class="input-wrap"><span class="prefix">$</span>
+            <input type="number" id="scorpSalary" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">Must be &ldquo;reasonable compensation&rdquo; for your role — IRS audits low salaries</span>
+        </div>
+        <div class="field">
+          <label for="scorpSalaryFedWith">Federal income tax withheld from S-Corp W-2</label>
+          <div class="input-wrap"><span class="prefix">$</span>
+            <input type="number" id="scorpSalaryFedWith" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">W-2 box 2 from your S-Corp payroll</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="scorpDistribution">S-Corp pass-through distributions (not salary)</label>
+          <div class="input-wrap"><span class="prefix">$</span>
+            <input type="number" id="scorpDistribution" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">Profit distributions — <strong>no SE tax</strong> on this portion, ordinary income tax only</span>
+        </div>
+        <div class="field">
+          <label for="priorScorpProfit">Prior year S-Corp total pass-through (safe harbor)</label>
+          <div class="input-wrap"><span class="prefix">$</span>
+            <input type="number" id="priorScorpProfit" value="0" min="0" oninput="calc()" /></div>
+          <span class="hint">Salary + distributions from last year — for quarterly safe harbor</span>
+        </div>
+      </div>
+      <div class="note" style="border-left:3px solid var(--purple-text);margin-top:0.5rem;">
+        <strong>S-Corporation tax strategy:</strong> Only your salary is subject to SE/payroll tax (15.3%).
+        Distributions bypass SE tax entirely — only ordinary income tax applies.
+        The larger the distribution relative to salary, the more SE tax you save.
+        However, the IRS requires the salary to be &ldquo;reasonable&rdquo; for your duties —
+        setting it too low is a common audit trigger. S-Corps also require their own
+        quarterly <strong>payroll tax deposits (Form 941)</strong> separate from your personal
+        estimated payments.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="section-title">Social Security &amp; Medicare (FICA)</p>
+
+    <p class="subsection-title first">Current year — withheld from W-2</p>
+    <div class="field-row three">
+      <div class="field">
+        <label for="ssWithheld">Social Security withheld</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="ssWithheld" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">W-2 box 4 &mdash; 6.2% on wages up to $168,600</span>
+      </div>
+      <div class="field">
+        <label for="medicareWithheld">Medicare withheld</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="medicareWithheld" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">W-2 box 6 &mdash; 1.45% on all wages</span>
+      </div>
+      <div class="field">
+        <label for="addlMedWithheld">Additional Medicare withheld</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="addlMedWithheld" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">0.9% on wages over $200K single / $250K MFJ</span>
+      </div>
+    </div>
+
+    <p class="subsection-title">Prior year — paid (from last year&rsquo;s W-2 &amp; Form 8959)</p>
+    <div class="field-row three">
+      <div class="field">
+        <label for="priorSS">Prior year Social Security paid</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="priorSS" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Last year&rsquo;s W-2 box 4</span>
+      </div>
+      <div class="field">
+        <label for="priorMedicare">Prior year Medicare paid</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="priorMedicare" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Last year&rsquo;s W-2 box 6</span>
+      </div>
+      <div class="field">
+        <label for="priorAddlMed">Prior year Additional Medicare paid</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="priorAddlMed" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Last year&rsquo;s Form 8959</span>
+      </div>
+    </div>
+
+    <p class="subsection-title">Prior year income tax — for safe harbor calculation</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="priorFedTax">Prior year federal income tax owed</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="priorFedTax" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Form 1040 line 24 (last year)</span>
+      </div>
+      <div class="field">
+        <label for="priorStateTax">Prior year state income tax owed</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="priorStateTax" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">From last year&rsquo;s state return — used for safe harbor</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Trading Gains -->
+  <div class="section">
+    <p class="section-title">Trading gains &amp; losses (this year)</p>
+
+    <!-- Stock trades -->
+    <p class="subsection-title first">Stocks &amp; ETFs &mdash; Schedule D</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="stNet">Short-term net gain / loss (held &lt; 1 yr)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="stNet" value="0" oninput="calc()" /></div>
+        <span class="hint">Total P&amp;L on all day trades — enter a negative number for a loss</span>
+      </div>
+      <div class="field">
+        <label for="ltNet">Long-term net gain / loss (held &gt; 1 yr)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="ltNet" value="0" oninput="calc()" /></div>
+        <span class="hint">Stocks held over 1 year — preferential LT rate</span>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="stockLossCarry">Stock loss carryforward (prior year)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="stockLossCarry" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">From Schedule D — carries forward only, not back. Enter as positive.</span>
+      </div>
+      <div class="field"></div>
+    </div>
+
+    <!-- Futures trades -->
+    <p class="subsection-title">Futures &amp; Section 1256 contracts &mdash; Form 6781</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="futNet">Futures net gain / loss</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="futNet" value="0" oninput="calc()" /></div>
+        <span class="hint">Your total P&amp;L for the year — from broker statement or Form 6781. Negative for a loss. Includes mark-to-market open positions at Dec 31.</span>
+      </div>
+      <div class="field">
+        <label for="futLossCarry">Futures loss carryforward (prior year)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="futLossCarry" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Sec. 1256 losses can carry back 3 yrs or forward — enter as positive</span>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"></div>
+      <div class="field">
+        <div style="background:var(--purple-bg);border:1px solid rgba(168,156,240,0.2);border-radius:var(--radius);padding:0.65rem 0.85rem;">
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;font-weight:600;
+               color:var(--purple-text);margin-bottom:3px;">60/40 Rule — IRC §1256</div>
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--purple-text);line-height:1.5;">
+            All futures gains/losses are automatically split:<br>
+            <strong>60% long-term</strong> + <strong>40% short-term</strong><br>
+            regardless of how long positions were held.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shared expenses -->
+    <p class="subsection-title">Shared deductions</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="tradingExp">Deductible trading expenses</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="tradingExp" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Platform fees, data subscriptions, margin interest</span>
+      </div>
+      <div class="field"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: Tax Breakdown -->
+  <div class="section">
+    <p class="section-title">Tax breakdown &amp; IRA eligibility</p>
+
+    <!-- IRA contribution inputs -->
+    <p class="subsection-title first">IRA contributions (this year)</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="age50plus">Age 50 or older?</label>
+        <select id="age50plus" onchange="calc()">
+          <option value="no" selected>No — under 50</option>
+          <option value="yes">Yes — 50 or older (catch-up eligible)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="rothContrib">Roth IRA contributed so far this year</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="rothContrib" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Counts toward your combined IRA limit</span>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="tradIraContrib">Traditional IRA contributed this year</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="tradIraContrib" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Non-deductible at your income — track on Form 8606 for backdoor Roth</span>
+      </div>
+      <div class="field">
+        <label for="rothConverted">Amount converted to Roth this year</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="rothConverted" value="0" min="0" oninput="calc()" /></div>
+        <span class="hint">Backdoor Roth conversion — no income limit, report on Form 8606</span>
+      </div>
+    </div>
+
+    <div id="summaryCards" class="results-grid"></div>
+    <div id="rothPanel"></div>
+    <hr class="divider" />
+    <p class="col-head fica" style="margin-bottom:0.75rem;">Social Security &amp; Medicare detail</p>
+    <div id="ficaDetail" class="three-col"></div>
+    <div id="ficaAlert"></div>
+    <hr class="divider" />
+    <div class="two-col" id="twoCol"></div>
+  </div>
+
+  <!-- SECTION 5: Quarterly Schedule -->
+  <div class="section">
+    <p class="section-title">Quarterly payment schedule</p>
+
+    <!-- Already paid inputs -->
+    <p class="subsection-title first">Estimated payments already made this year</p>
+    <div class="field-row" style="margin-bottom:1rem;">
+      <div class="field">
+        <label for="paidQ1Fed">Q1 federal paid (due Apr 15)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="paidQ1Fed" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label for="paidQ1Or">Q1 state paid (due Apr 15)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="paidQ1Or" value="0" min="0" oninput="calc()" /></div>
+      </div>
+    </div>
+    <div class="field-row" style="margin-bottom:1rem;">
+      <div class="field">
+        <label for="paidQ2Fed">Q2 federal paid (due Jun 16)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="paidQ2Fed" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label for="paidQ2Or">Q2 state paid (due Jun 16)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="paidQ2Or" value="0" min="0" oninput="calc()" /></div>
+      </div>
+    </div>
+    <div class="field-row" style="margin-bottom:1rem;">
+      <div class="field">
+        <label for="paidQ3Fed">Q3 federal paid (due Sep 15)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="paidQ3Fed" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label for="paidQ3Or">Q3 state paid (due Sep 15)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="paidQ3Or" value="0" min="0" oninput="calc()" /></div>
+      </div>
+    </div>
+    <div class="field-row" style="margin-bottom:1.25rem;">
+      <div class="field">
+        <label for="paidQ4Fed">Q4 federal paid (due Jan 15)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="paidQ4Fed" value="0" min="0" oninput="calc()" /></div>
+      </div>
+      <div class="field">
+        <label for="paidQ4Or">Q4 state paid (due Jan 15)</label>
+        <div class="input-wrap"><span class="prefix">$</span>
+          <input type="number" id="paidQ4Or" value="0" min="0" oninput="calc()" /></div>
+      </div>
+    </div>
+
+    <p class="subsection-title">Payment schedule</p>
+    <div id="quarterGrid"></div>
+    <div id="safeHarborNote"></div>
+    <div id="totalBanner"></div>
+
+    <div class="note fica-note">
+      <strong>Social Security &amp; Medicare on W-2 wages:</strong> These are payroll taxes withheld automatically by your employer — you do not pay them via quarterly estimates. Capital gains from day trading are <em>not</em> subject to SS or Medicare. However, if your total income exceeds $200K (single) / $250K (MFJ), any unpaid <strong>Additional Medicare Tax (0.9%)</strong> shortfall must be paid via estimated tax (Form 8959). The <strong>NIIT (3.8%)</strong> already included above separately covers investment income for high earners.
+    </div>
+    <div class="note fed-note">
+      <strong>Federal safe harbor:</strong> Pay the lesser of 90% of this year&rsquo;s projected income tax or 100% of last year&rsquo;s income tax (110% if prior AGI &gt; $150,000). Pay at <strong>IRS Direct Pay</strong> (irs.gov/payments) or <strong>EFTPS</strong>.
+    </div>
+    <div id="stateQtrNote" class="note or-note"></div>
+  </div>
+
+  <div class="disclaimer">
+    This calculator provides estimates only and is not tax advice. Tax laws change frequently.<br>
+    SS &amp; Medicare on W-2 wages are withheld by your employer and not paid via quarterly estimates.<br>
+    Consult a qualified CPA or tax professional for your specific situation.
+  </div>
+
+</div>
+
+<script>
+  // ── Federal tax data (2026) — mutable, updatable via fetch ────────────────
+  const TAX_DATA_KEY = 'dtCalc_taxData_v1';
+
+  let TAX_DATA = {
+    year: 2026,
+    FED_BRACKETS: {
+      single: [[11600,.10],[47150,.12],[100525,.22],[191950,.24],[243725,.32],[609350,.35],[Infinity,.37]],
+      mfj:    [[23200,.10],[94300,.12],[201050,.22],[383900,.24],[487450,.32],[731200,.35],[Infinity,.37]],
+      mfs:    [[11600,.10],[47150,.12],[100525,.22],[191950,.24],[243725,.32],[365600,.35],[Infinity,.37]],
+      hoh:    [[16550,.10],[63100,.12],[100500,.22],[191950,.24],[243700,.32],[609350,.35],[Infinity,.37]]
+    },
+    FED_STD:     { single:16100, mfj:32200, mfs:16100, hoh:24300 },
+    LTCG_BRKT: {
+      single: [[47025,0],[518900,.15],[Infinity,.20]],
+      mfj:    [[94050,0],[583750,.15],[Infinity,.20]],
+      mfs:    [[47025,0],[291850,.15],[Infinity,.20]],
+      hoh:    [[63000,0],[551350,.15],[Infinity,.20]]
+    },
+    NIIT_THRESH:  { single:200000, mfj:250000, mfs:125000, hoh:200000 },
+    ADDL_THRESH:  { single:200000, mfj:250000, mfs:125000, hoh:200000 },
+    SS_BASE:      176100
+  };
+
+  // Load any previously fetched tax data from localStorage
+  try {
+    const savedTax = localStorage.getItem(TAX_DATA_KEY);
+    if (savedTax) {
+      const parsed = JSON.parse(savedTax);
+      // Restore Infinity values lost in JSON serialization
+      ['FED_BRACKETS','LTCG_BRKT'].forEach(key => {
+        if (parsed[key]) {
+          Object.keys(parsed[key]).forEach(fs => {
+            parsed[key][fs] = parsed[key][fs].map(([top, rate]) =>
+              [top === null || top === 1e308 || top === 'Infinity' ? Infinity : top, rate]
+            );
+          });
+        }
+      });
+      TAX_DATA = parsed;
+    }
+  } catch(e) {}
+
+  async function fetchTaxBrackets() {
+    const btn    = document.getElementById('taxFetchBtn');
+    const status = document.getElementById('taxFetchStatus');
+    if (!btn || !status) return;
+    btn.disabled     = true;
+    btn.textContent  = '⟳ Fetching…';
+    status.textContent = '';
+    status.style.color = 'var(--text-3)';
+
+    try {
+      const yr = new Date().getFullYear();
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 3000,
+          messages: [{
+            role: 'user',
+            content: `What are the IRS federal income tax brackets, standard deductions, long-term capital gains brackets, and other key thresholds for tax year ${yr}?
+
+Reply ONLY with a valid JSON object, no markdown fences, no explanation. Use this exact shape. For bracket arrays, each element is [topOfBracket, rate] where the last bracket top must be the number 1e308 (representing Infinity, since JSON cannot encode Infinity):
+
+{
+  "year": ${yr},
+  "FED_BRACKETS": {
+    "single": [[number,rate],...,[1e308,0.37]],
+    "mfj":    [[number,rate],...,[1e308,0.37]],
+    "mfs":    [[number,rate],...,[1e308,0.37]],
+    "hoh":    [[number,rate],...,[1e308,0.37]]
+  },
+  "FED_STD": { "single": number, "mfj": number, "mfs": number, "hoh": number },
+  "LTCG_BRKT": {
+    "single": [[number,0],[number,0.15],[1e308,0.20]],
+    "mfj":    [[number,0],[number,0.15],[1e308,0.20]],
+    "mfs":    [[number,0],[number,0.15],[1e308,0.20]],
+    "hoh":    [[number,0],[number,0.15],[1e308,0.20]]
+  },
+  "NIIT_THRESH":  { "single": number, "mfj": number, "mfs": number, "hoh": number },
+  "ADDL_THRESH":  { "single": number, "mfj": number, "mfs": number, "hoh": number },
+  "SS_BASE": number
+}`
+          }]
+        })
+      });
+
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const data  = await res.json();
+      const text  = (data.content || []).map(b => b.text || '').join('').trim();
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      // Validate shape
+      if (!parsed.FED_BRACKETS?.single || !parsed.FED_STD?.single || !parsed.SS_BASE) {
+        throw new Error('Unexpected response shape');
+      }
+
+      // Convert 1e308 back to Infinity
+      ['FED_BRACKETS','LTCG_BRKT'].forEach(key => {
+        if (parsed[key]) {
+          Object.keys(parsed[key]).forEach(fs => {
+            parsed[key][fs] = parsed[key][fs].map(([top, rate]) =>
+              [top >= 1e307 ? Infinity : top, rate]
+            );
+          });
+        }
+      });
+
+      TAX_DATA = parsed;
+
+      // Persist (serialize Infinity as 1e308)
+      const toStore = JSON.parse(JSON.stringify(parsed, (k, v) => v === Infinity ? 1e308 : v));
+      localStorage.setItem(TAX_DATA_KEY, JSON.stringify(toStore));
+
+      status.textContent = `✓ Federal brackets updated to ${yr}`;
+      status.style.color = 'var(--green-text)';
+      runCalc();
+    } catch(err) {
+      status.textContent = `⚠ Fetch failed — using built-in ${TAX_DATA.year} brackets`;
+      status.style.color = 'var(--amber-text)';
+      console.error('Tax bracket fetch error:', err);
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = '↻ Update brackets';
+    }
+  }
+
+  // ── 50-State income tax data (2026) ────────────────────────────────────────
+  // Format: { name, noTax, flatRate, brackets:{single,mfj,mfs,hoh}, std:{single,mfj,mfs,hoh}, note }
+  // noTax:true = no income tax (show greyed state fields, $0 quarterly)
+  // flatRate:X = flat rate applied to all taxable income
+  // brackets = array of [topOfBracket, rate] same format as federal
+  // std = standard deduction per filing status (0 if state uses federal AGI directly)
+  // note = special note shown in UI when relevant (e.g. WA capital gains only)
+  const STATE_DATA = {
+    AL: { name:'Alabama',        brackets:{ single:[[500,.02],[3000,.04],[Infinity,.05]],         mfj:[[1000,.02],[6000,.04],[Infinity,.05]],         mfs:[[500,.02],[3000,.04],[Infinity,.05]],         hoh:[[500,.02],[3000,.04],[Infinity,.05]] },        std:{ single:3000, mfj:8500, mfs:3000, hoh:4700 } },
+    AK: { name:'Alaska',         noTax:true },
+    AZ: { name:'Arizona',        flatRate:.025, std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    AR: { name:'Arkansas',       brackets:{ single:[[5000,.02],[10000,.04],[Infinity,.047]],       mfj:[[5000,.02],[10000,.04],[Infinity,.047]],       mfs:[[5000,.02],[10000,.04],[Infinity,.047]],       hoh:[[5000,.02],[10000,.04],[Infinity,.047]] },       std:{ single:2340, mfj:4680, mfs:2340, hoh:2340 } },
+    CA: { name:'California',     brackets:{ single:[[10756,.01],[25499,.02],[40245,.04],[54997,.06],[68350,.08],[349137,.093],[418961,.103],[698271,.113],[1000000,.123],[Infinity,.133]],     mfj:[[21512,.01],[50998,.02],[80490,.04],[109994,.06],[136700,.08],[698274,.093],[837922,.103],[1000000,.113],[1396542,.123],[Infinity,.133]],     mfs:[[10756,.01],[25499,.02],[40245,.04],[54997,.06],[68350,.08],[349137,.093],[418961,.103],[698271,.113],[1000000,.123],[Infinity,.133]],     hoh:[[21527,.01],[51048,.02],[65744,.04],[81364,.06],[95509,.08],[487872,.093],[585481,.103],[975685,.113],[1000000,.123],[Infinity,.133]] },     std:{ single:5363, mfj:10726, mfs:5363, hoh:10726 }, note:'CA quarterly: 30/40/0/30% split (not 25% each quarter)' },
+    CO: { name:'Colorado',       flatRate:.044, std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    CT: { name:'Connecticut',    brackets:{ single:[[10000,.03],[50000,.05],[100000,.055],[200000,.06],[250000,.065],[500000,.069],[Infinity,.0699]],    mfj:[[20000,.03],[100000,.05],[200000,.055],[400000,.06],[500000,.065],[1000000,.069],[Infinity,.0699]],    mfs:[[10000,.03],[50000,.05],[100000,.055],[200000,.06],[250000,.065],[500000,.069],[Infinity,.0699]],    hoh:[[16000,.03],[80000,.05],[160000,.055],[320000,.06],[400000,.065],[800000,.069],[Infinity,.0699]] },    std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    DE: { name:'Delaware',       brackets:{ single:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]],       mfj:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]],       mfs:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]],       hoh:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]] },       std:{ single:3250, mfj:6500, mfs:3250, hoh:3250 } },
+    FL: { name:'Florida',        noTax:true },
+    GA: { name:'Georgia',        flatRate:.0499, std:{ single:12000, mfj:24000, mfs:12000, hoh:12000 } },
+    HI: { name:'Hawaii',         brackets:{ single:[[2400,.014],[4800,.032],[9600,.055],[14400,.064],[19200,.068],[24000,.072],[36000,.076],[48000,.079],[150000,.0825],[175000,.09],[200000,.1],[Infinity,.11]],         mfj:[[4800,.014],[9600,.032],[19200,.055],[28800,.064],[38400,.068],[48000,.072],[72000,.076],[96000,.079],[300000,.0825],[350000,.09],[400000,.1],[Infinity,.11]],         mfs:[[2400,.014],[4800,.032],[9600,.055],[14400,.064],[19200,.068],[24000,.072],[36000,.076],[48000,.079],[150000,.0825],[175000,.09],[200000,.1],[Infinity,.11]],         hoh:[[3584,.014],[7168,.032],[14336,.055],[21504,.064],[28672,.068],[35840,.072],[53760,.076],[71680,.079],[225000,.0825],[262500,.09],[300000,.1],[Infinity,.11]] },         std:{ single:2200, mfj:4400, mfs:2200, hoh:3212 } },
+    ID: { name:'Idaho',          flatRate:.058, std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    IL: { name:'Illinois',       flatRate:.0495, std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    IN: { name:'Indiana',        flatRate:.03, std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    IA: { name:'Iowa',           flatRate:.038, std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    KS: { name:'Kansas',         brackets:{ single:[[15000,.031],[30000,.0525],[Infinity,.057]],         mfj:[[30000,.031],[60000,.0525],[Infinity,.057]],         mfs:[[15000,.031],[30000,.0525],[Infinity,.057]],         hoh:[[22500,.031],[45000,.0525],[Infinity,.057]] },         std:{ single:3500, mfj:8000, mfs:3500, hoh:6000 } },
+    KY: { name:'Kentucky',       flatRate:.035, std:{ single:3160, mfj:3160, mfs:3160, hoh:3160 } },
+    LA: { name:'Louisiana',      flatRate:.03, std:{ single:12500, mfj:25000, mfs:12500, hoh:12500 } },
+    ME: { name:'Maine',          brackets:{ single:[[26050,0],[54450,.058],[127900,.0675],[Infinity,.0715]],          mfj:[[52100,0],[108900,.058],[255800,.0675],[Infinity,.0715]],          mfs:[[26050,0],[54450,.058],[127900,.0675],[Infinity,.0715]],          hoh:[[39100,0],[81700,.058],[191850,.0675],[Infinity,.0715]] },          std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    MD: { name:'Maryland',       brackets:{ single:[[1000,.02],[2000,.03],[3000,.04],[100000,.0475],[125000,.05],[150000,.0525],[250000,.0550],[Infinity,.065]],       mfj:[[1000,.02],[2000,.03],[3000,.04],[150000,.0475],[175000,.05],[225000,.0525],[300000,.055],[Infinity,.065]],       mfs:[[1000,.02],[2000,.03],[3000,.04],[100000,.0475],[125000,.05],[150000,.0525],[250000,.055],[Infinity,.065]],       hoh:[[1000,.02],[2000,.03],[3000,.04],[125000,.0475],[150000,.05],[175000,.0525],[275000,.055],[Infinity,.065]] },       std:{ single:2600, mfj:5200, mfs:2600, hoh:2600 } },
+    MA: { name:'Massachusetts',  brackets:{ single:[[1053750,.05],[Infinity,.09]],  mfj:[[1053750,.05],[Infinity,.09]],  mfs:[[1053750,.05],[Infinity,.09]],  hoh:[[1053750,.05],[Infinity,.09]] },  std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    MI: { name:'Michigan',       flatRate:.0425, std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    MN: { name:'Minnesota',      brackets:{ single:[[31690,.0535],[103080,.068],[171220,.0785],[Infinity,.0985]],      mfj:[[46330,.0535],[184040,.068],[304970,.0785],[Infinity,.0985]],      mfs:[[23165,.0535],[92020,.068],[152485,.0785],[Infinity,.0985]],      hoh:[[38900,.0535],[156570,.068],[254270,.0785],[Infinity,.0985]] },      std:{ single:14575, mfj:29150, mfs:14575, hoh:14575 } },
+    MS: { name:'Mississippi',    brackets:{ single:[[10000,0],[Infinity,.044]],    mfj:[[10000,0],[Infinity,.044]],    mfs:[[10000,0],[Infinity,.044]],    hoh:[[10000,0],[Infinity,.044]] },    std:{ single:2300, mfj:4600, mfs:2300, hoh:3400 } },
+    MO: { name:'Missouri',       brackets:{ single:[[1273,0],[2546,.02],[3819,.025],[5092,.03],[6365,.035],[7638,.04],[8911,.045],[10184,.05],[Infinity,.048]],       mfj:[[1273,0],[2546,.02],[3819,.025],[5092,.03],[6365,.035],[7638,.04],[8911,.045],[10184,.05],[Infinity,.048]],       mfs:[[1273,0],[2546,.02],[3819,.025],[5092,.03],[6365,.035],[7638,.04],[8911,.045],[10184,.05],[Infinity,.048]],       hoh:[[1273,0],[2546,.02],[3819,.025],[5092,.03],[6365,.035],[7638,.04],[8911,.045],[10184,.05],[Infinity,.048]] },       std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    MT: { name:'Montana',        brackets:{ single:[[3600,.01],[6300,.02],[9900,.03],[14100,.04],[18300,.05],[Infinity,.059]],        mfj:[[7200,.01],[12600,.02],[19800,.03],[28200,.04],[36600,.05],[Infinity,.059]],        mfs:[[3600,.01],[6300,.02],[9900,.03],[14100,.04],[18300,.05],[Infinity,.059]],        hoh:[[3600,.01],[6300,.02],[9900,.03],[14100,.04],[18300,.05],[Infinity,.059]] },        std:{ single:5540, mfj:11080, mfs:5540, hoh:5540 } },
+    NE: { name:'Nebraska',       brackets:{ single:[[3700,.0246],[22170,.0351],[33180,.0501],[Infinity,.0455]],       mfj:[[7390,.0246],[44330,.0351],[66360,.0501],[Infinity,.0455]],       mfs:[[3700,.0246],[22170,.0351],[33180,.0501],[Infinity,.0455]],       hoh:[[5550,.0246],[33260,.0351],[49770,.0501],[Infinity,.0455]] },       std:{ single:7900, mfj:15800, mfs:7900, hoh:7900 } },
+    NV: { name:'Nevada',         noTax:true },
+    NH: { name:'New Hampshire',  noTax:true, note:'NH eliminated interest & dividend tax in 2025. No wage or capital gains tax.' },
+    NJ: { name:'New Jersey',     brackets:{ single:[[20000,.014],[35000,.0175],[40000,.035],[75000,.05525],[500000,.0637],[Infinity,.1075]],     mfj:[[20000,.014],[50000,.0175],[70000,.035],[80000,.05525],[150000,.0637],[500000,.0897],[Infinity,.1075]],     mfs:[[20000,.014],[35000,.0175],[40000,.035],[75000,.05525],[500000,.0637],[Infinity,.1075]],     hoh:[[20000,.014],[50000,.0175],[70000,.035],[80000,.05525],[150000,.0637],[500000,.0897],[Infinity,.1075]] },     std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    NM: { name:'New Mexico',     brackets:{ single:[[5500,.015],[11000,.032],[16000,.043],[210000,.049],[Infinity,.059]],     mfj:[[8000,.015],[16000,.032],[24000,.043],[315000,.049],[Infinity,.059]],     mfs:[[4000,.015],[8000,.032],[12000,.043],[157500,.049],[Infinity,.059]],     hoh:[[8000,.015],[16000,.032],[24000,.043],[315000,.049],[Infinity,.059]] },     std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    NY: { name:'New York',       brackets:{ single:[[17150,.04],[23600,.045],[27900,.0525],[161550,.0585],[323200,.0625],[2155350,.0685],[5000000,.0965],[25000000,.103],[Infinity,.109]],       mfj:[[27900,.04],[40000,.045],[83600,.0525],[323200,.0585],[2155350,.0625],[5000000,.0897],[25000000,.1030],[Infinity,.109]],       mfs:[[17150,.04],[23600,.045],[27900,.0525],[161550,.0585],[323200,.0625],[2155350,.0685],[5000000,.0965],[25000000,.103],[Infinity,.109]],       hoh:[[17150,.04],[23600,.045],[27900,.0525],[161550,.0585],[323200,.0625],[2155350,.0685],[5000000,.0965],[25000000,.103],[Infinity,.109]] },       std:{ single:8000, mfj:16050, mfs:8000, hoh:11200 } },
+    NC: { name:'North Carolina',  flatRate:.0399, std:{ single:12750, mfj:25500, mfs:12750, hoh:19125 } },
+    ND: { name:'North Dakota',   brackets:{ single:[[50000,0],[Infinity,.025]],   mfj:[[75000,0],[Infinity,.025]],   mfs:[[50000,0],[Infinity,.025]],   hoh:[[50000,0],[Infinity,.025]] },   std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    OH: { name:'Ohio',           flatRate:.0275, std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    OK: { name:'Oklahoma',       brackets:{ single:[[1000,.0025],[2500,.0075],[3750,.0175],[4900,.0275],[7200,.0375],[Infinity,.045]],       mfj:[[2000,.0025],[5000,.0075],[7500,.0175],[9800,.0275],[14400,.0375],[Infinity,.045]],       mfs:[[1000,.0025],[2500,.0075],[3750,.0175],[4900,.0275],[7200,.0375],[Infinity,.045]],       hoh:[[1000,.0025],[2500,.0075],[3750,.0175],[4900,.0275],[7200,.0375],[Infinity,.045]] },       std:{ single:6350, mfj:12700, mfs:6350, hoh:9350 } },
+    OR: { name:'Oregon',         brackets:{ single:[[18400,.0475],[250000,.0675],[125000,.0875],[Infinity,.099]],         mfj:[[18400,.0475],[250000,.0675],[250000,.0875],[Infinity,.099]],         mfs:[[18400,.0475],[125000,.0675],[125000,.0875],[Infinity,.099]],         hoh:[[18400,.0475],[250000,.0675],[125000,.0875],[Infinity,.099]] },         std:{ single:2420, mfj:4865, mfs:2420, hoh:4865 } },
+    PA: { name:'Pennsylvania',   flatRate:.0307, std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    RI: { name:'Rhode Island',   brackets:{ single:[[77450,.0375],[176050,.0475],[Infinity,.0599]],   mfj:[[77450,.0375],[176050,.0475],[Infinity,.0599]],   mfs:[[38725,.0375],[88025,.0475],[Infinity,.0599]],   hoh:[[77450,.0375],[176050,.0475],[Infinity,.0599]] },   std:{ single:10550, mfj:21100, mfs:10550, hoh:10550 } },
+    SC: { name:'South Carolina', brackets:{ single:[[3460,0],[Infinity,.0521]],  mfj:[[3460,0],[Infinity,.0521]],  mfs:[[3460,0],[Infinity,.0521]],  hoh:[[3460,0],[Infinity,.0521]] },  std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } },
+    SD: { name:'South Dakota',   noTax:true },
+    TN: { name:'Tennessee',      noTax:true, note:'TN has no income tax on wages or investment income.' },
+    TX: { name:'Texas',          noTax:true },
+    UT: { name:'Utah',           flatRate:.0445, std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    VT: { name:'Vermont',        brackets:{ single:[[45400,.0335],[110050,.066],[229550,.076],[Infinity,.0875]],        mfj:[[75850,.0335],[183500,.066],[279450,.076],[Infinity,.0875]],        mfs:[[37925,.0335],[91750,.066],[139725,.076],[Infinity,.0875]],        hoh:[[60850,.0335],[155700,.066],[229550,.076],[Infinity,.0875]] },        std:{ single:6500, mfj:13000, mfs:6500, hoh:6500 } },
+    VA: { name:'Virginia',       brackets:{ single:[[3000,.02],[5000,.03],[17000,.05],[Infinity,.0575]],       mfj:[[3000,.02],[5000,.03],[17000,.05],[Infinity,.0575]],       mfs:[[3000,.02],[5000,.03],[17000,.05],[Infinity,.0575]],       hoh:[[3000,.02],[5000,.03],[17000,.05],[Infinity,.0575]] },       std:{ single:8000, mfj:16000, mfs:8000, hoh:8000 } },
+    WA: { name:'Washington',     noTax:true, note:'WA has no income tax. Capital gains tax (7%/9.9%) applies only to long-term gains over $270K — not typically applicable to regular day trading.' },
+    WV: { name:'West Virginia',  brackets:{ single:[[10000,.0236],[25000,.0315],[Infinity,.0482]],  mfj:[[10000,.0236],[25000,.0315],[Infinity,.0482]],  mfs:[[10000,.0236],[25000,.0315],[Infinity,.0482]],  hoh:[[10000,.0236],[25000,.0315],[Infinity,.0482]] },  std:{ single:0, mfj:0, mfs:0, hoh:0 } },
+    WI: { name:'Wisconsin',      brackets:{ single:[[14320,.0354],[28640,.0465],[315310,.053],[Infinity,.0765]],      mfj:[[19090,.0354],[38190,.0465],[420420,.053],[Infinity,.0765]],      mfs:[[14320,.0354],[28640,.0465],[315310,.053],[Infinity,.0765]],      hoh:[[14320,.0354],[28640,.0465],[315310,.053],[Infinity,.0765]] },      std:{ single:12040, mfj:21820, mfs:12040, hoh:12040 } },
+    WY: { name:'Wyoming',        noTax:true },
+    DC: { name:'Washington D.C.',brackets:{ single:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[Infinity,.1075]],      mfj:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[Infinity,.1075]],      mfs:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[Infinity,.1075]],      hoh:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[Infinity,.1075]] },      std:{ single:14600, mfj:29200, mfs:14600, hoh:21900 } }
+  };
+
+  function getStateTax(stateKey, filing, income) {
+    const s = STATE_DATA[stateKey];
+    if (!s || s.noTax) return 0;
+    const std = s.std ? (s.std[filing] || 0) : 0;
+    const taxable = Math.max(0, income - std);
+    if (s.flatRate) return taxable * s.flatRate;
+    const brackets = s.brackets ? s.brackets[filing] : null;
+    if (!brackets) return 0;
+    return taxOn(taxable, brackets);
+  }
+
+  function taxOn(income, brackets) {
+    let tax = 0, prev = 0;
+    for (const [top, rate] of brackets) {
+      if (income <= 0) break;
+      const chunk = Math.min(income, top - prev);
+      tax += chunk * rate;
+      prev = top;
+      income -= chunk;
+    }
+    return tax;
+  }
+
+  function fmt(n) {
+    const s = n < 0 ? '-' : '';
+    return s + '$' + Math.abs(Math.round(n)).toLocaleString();
+  }
+
+  function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+  function brow(label, val, cls) {
+    return `<div class="breakdown-row${cls?' '+cls:''}"><span>${label}</span><span>${val}</span></div>`;
+  }
+
+  function toggleBizFields() {
+    const biz = document.getElementById('bizStructure').value;
+    document.getElementById('solePropFields').style.display  = biz === 'soleProp' ? 'block' : 'none';
+    document.getElementById('scorpFields').style.display     = biz === 'scorp'    ? 'block' : 'none';
+    document.getElementById('bizExpensesField').style.display= biz !== 'none'     ? 'block' : 'none';
+  }
+
+  // ── Roth IRA limits (global, updatable via fetch) ─────────────────────────
+  const ROTH_LIMITS_KEY = 'dtCalc_rothLimits_v1';
+
+  // Default to current known values (2026) — overwritten by fetch or localStorage
+  let ROTH_LIMITS = {
+    year: new Date().getFullYear(),
+    contribution: 7500,
+    catchup50: 1100,
+    phaseout: {
+      single: { start: 153000, end: 168000 },
+      mfj:    { start: 242000, end: 252000 },
+      mfs:    { start: 0,      end: 10000  },
+      hoh:    { start: 153000, end: 168000 }
+    }
+  };
+
+  // Load any previously fetched limits from localStorage
+  try {
+    const saved = localStorage.getItem(ROTH_LIMITS_KEY);
+    if (saved) ROTH_LIMITS = JSON.parse(saved);
+  } catch(e) {}
+
+  async function fetchRothLimits() {
+    const btn    = document.getElementById('rothFetchBtn');
+    const status = document.getElementById('rothFetchStatus');
+    if (!btn || !status) return;
+    btn.disabled  = true;
+    btn.textContent = '⟳ Fetching…';
+    status.textContent = '';
+
+    try {
+      const yr  = new Date().getFullYear();
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: `What are the IRS Roth IRA contribution limits and MAGI phase-out ranges for tax year ${yr}?
+Reply ONLY with a JSON object, no markdown, no explanation, exactly this shape:
+{
+  "year": ${yr},
+  "contribution": <integer dollar amount for under-50>,
+  "catchup50": <integer additional catch-up for age 50+>,
+  "phaseout": {
+    "single": { "start": <integer>, "end": <integer> },
+    "mfj":    { "start": <integer>, "end": <integer> },
+    "mfs":    { "start": <integer>, "end": <integer> },
+    "hoh":    { "start": <integer>, "end": <integer> }
+  }
+}`
+          }]
+        })
+      });
+
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data  = await res.json();
+      const text  = (data.content || []).map(b => b.text || '').join('').trim();
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      // Validate shape before accepting
+      if (!parsed.contribution || !parsed.phaseout?.single) throw new Error('Unexpected response shape');
+
+      ROTH_LIMITS = parsed;
+      localStorage.setItem(ROTH_LIMITS_KEY, JSON.stringify(ROTH_LIMITS));
+      status.textContent = `✓ Updated to ${yr} limits`;
+      runCalc();
+    } catch(err) {
+      status.textContent = `⚠ Fetch failed — using current limits`;
+      console.error('Roth limits fetch error:', err);
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = '↻ Update limits';
+    }
+  }
+
+  function runCalc() {
+    // Always keep year labels current
+    const yr = new Date().getFullYear();
+    const yrLabel = document.getElementById('taxYearLabel');
+    if (yrLabel) yrLabel.textContent = yr;
+    const brLabel = document.getElementById('bracketYearLabel');
+    if (brLabel) brLabel.textContent = TAX_DATA.year === yr ? `${TAX_DATA.year} ✓` : `${TAX_DATA.year} (hit ↻ to update)`;
+    const filing          = document.getElementById('filing').value;
+    const wages           = v('otherIncome');
+    const fedWith         = v('fedWithheld');
+    const stWith          = v('stateWithheld');
+    const ssWith          = v('ssWithheld');
+    const medWith         = v('medicareWithheld');
+    const addlWith        = v('addlMedWithheld');
+    const priorSS         = v('priorSS');
+    const priorMed        = v('priorMedicare');
+    const priorAddl       = v('priorAddlMed');
+    const priorFed        = v('priorFedTax');
+    const priorOR         = v('priorStateTax');
+    const propPayouts      = v('propPayouts');
+    const propExpenses     = v('propExpenses');
+    const priorPropTax     = v('priorPropTax');
+
+    // ── Business / SE income inputs ──
+    const bizStructure      = document.getElementById('bizStructure').value;
+    const bizGrossIncome    = v('bizGrossIncome');
+    const bizExpenses       = v('bizExpenses');
+    const priorBizProfit    = v('priorBizProfit');
+    const scorpSalary       = v('scorpSalary');
+    const scorpSalaryFedWith= v('scorpSalaryFedWith');
+    const scorpDistribution = v('scorpDistribution');
+    const priorScorpProfit  = v('priorScorpProfit');
+    const stNet           = parseFloat(document.getElementById('stNet').value) || 0;
+    const ltNet           = parseFloat(document.getElementById('ltNet').value) || 0;
+    const stockLossCarry  = v('stockLossCarry');
+    const futNet          = parseFloat(document.getElementById('futNet').value) || 0;
+    const futLossCarry    = v('futLossCarry');
+    const tradingExp      = v('tradingExp');
+
+    // ── Stock gains (Schedule D) ──
+    // Apply prior year loss carryforward against gains (ST first, then LT)
+    const stockRawTotal   = stNet + ltNet;
+    const stockApplied    = Math.min(stockLossCarry, Math.max(0, stockRawTotal));
+    // Net ST: reduce by carryforward, but only down to 0 (can't make ST negative here)
+    const netST           = Math.max(0, stNet - Math.max(0, stockApplied - Math.max(0, ltNet)));
+    const netLT           = Math.max(0, ltNet - Math.max(0, stockApplied - Math.max(0, stNet)));
+    // If total stock position is still a net loss after carryforward, cap deduction at $3,000
+    const stockNetLoss    = Math.min(0, stockRawTotal - stockLossCarry);
+    const stockLossDeduct = Math.max(-3000, stockNetLoss);
+
+    // ── Futures gains (Form 6781, IRC §1256 — 60/40 rule) ──
+    const futNetAfterCarry = futNet - futLossCarry;   // apply prior year carryforward
+    const futLT            = futNetAfterCarry * 0.60; // 60% taxed at long-term rate
+    const futST            = futNetAfterCarry * 0.40; // 40% taxed at short-term rate
+
+    // ── Combined totals ──
+    const totalNetST  = netST + Math.max(0, futST);
+    const totalNetLT  = netLT + Math.max(0, futLT);
+
+    // ── Prop firm income (Schedule C / 1099-NEC) ──
+    const propNet         = Math.max(0, propPayouts - propExpenses);
+    const propSEBase      = propNet * 0.9235;
+    const propSETax       = propSEBase * 0.153;
+    const propSEDeduct    = propSETax / 2;
+
+    // ── Business / SE income (sole prop or S-Corp) ──
+    let bizNetIncome    = 0;   // ordinary income flowing to personal return
+    let bizSEBase       = 0;   // portion subject to SE tax
+    let bizSETax        = 0;   // SE tax owed on business income
+    let bizSEDeduct     = 0;   // above-the-line deduction (½ SE tax)
+    let bizExtraFedWith = 0;   // additional federal withholding from S-Corp W-2
+    let bizSESH         = 0;   // safe harbor for biz SE tax
+
+    if (bizStructure === 'soleProp') {
+      const bizNet    = Math.max(0, bizGrossIncome - bizExpenses);
+      bizSEBase       = bizNet * 0.9235;
+      bizSETax        = bizSEBase * 0.153;
+      bizSEDeduct     = bizSETax / 2;
+      bizNetIncome    = bizNet - bizSEDeduct;
+      bizSESH         = bizNet > 0 ? Math.max(bizSETax * 0.90, priorBizProfit * 0.9235 * 0.153) : 0;
+    } else if (bizStructure === 'scorp') {
+      // S-Corp salary: subject to payroll tax (handled by corporate payroll, not personal estimates)
+      // S-Corp distributions: ordinary income only, NO SE tax
+      const scorpTotal  = scorpSalary + scorpDistribution;
+      // Salary portion SE/payroll tax is handled by the S-Corp's Form 941 — not personal estimates
+      // Distributions flow to personal return as ordinary income, no SE deduction needed
+      bizNetIncome      = scorpDistribution;   // salary already in wages via W-2
+      bizExtraFedWith   = scorpSalaryFedWith;  // withholding from S-Corp W-2
+      bizSETax          = 0;                   // SE tax on distributions = $0
+      bizSEDeduct       = 0;
+      bizSESH           = scorpDistribution > 0
+        ? Math.max(scorpDistribution * TAX_DATA.FED_BRACKETS[filing].slice(-1)[0][1] * 0.90,
+                   priorScorpProfit * 0.25)
+        : 0;
+    }
+
+    // Combined total federal withholding (W-2 + any S-Corp W-2)
+    const totalFedWith  = fedWith + bizExtraFedWith;
+
+    // Federal income tax — include all SE income streams
+    const allSEDeduct   = propSEDeduct + bizSEDeduct;
+    const fedOrd        = wages + totalNetST + stockLossDeduct + propNet + bizNetIncome - allSEDeduct - tradingExp;
+    const fedTaxOrd   = Math.max(0, fedOrd - TAX_DATA.FED_STD[filing]);
+    const fedIT       = taxOn(fedTaxOrd, TAX_DATA.FED_BRACKETS[filing]);
+    const ltcgTax     = taxOn(fedTaxOrd + totalNetLT, TAX_DATA.LTCG_BRKT[filing]) - taxOn(fedTaxOrd, TAX_DATA.LTCG_BRKT[filing]);
+    const agi         = fedOrd + totalNetLT;
+
+    // MAGI for Roth IRA (add back trading expenses and SE deduction — not deductible for MAGI)
+    const magi          = wages + totalNetST + totalNetLT + stockLossDeduct + propNet + bizNetIncome;
+
+    // IRA contribution inputs
+    const age50plus     = document.getElementById('age50plus').value === 'yes';
+    const rothContrib   = v('rothContrib');
+    const tradIraContrib= v('tradIraContrib');
+    const rothConverted = v('rothConverted');
+
+    // Roth IRA limits — pulled from global ROTH_LIMITS (updatable via fetch button)
+    const ROTH_BASE     = ROTH_LIMITS.contribution;
+    const ROTH_CATCHUP  = ROTH_LIMITS.catchup50 || 1100;
+    const ROTH_LIMIT    = age50plus ? ROTH_BASE + ROTH_CATCHUP : ROTH_BASE;
+    const ROTH_PHASEOUT = ROTH_LIMITS.phaseout;
+    const po            = ROTH_PHASEOUT[filing];
+
+    // Combined IRA limit (Roth + Traditional must not exceed this)
+    const combinedIraLimit   = ROTH_LIMIT;
+    const combinedContributed= rothContrib + tradIraContrib;
+    const combinedRemaining  = Math.max(0, combinedIraLimit - combinedContributed);
+    const combinedOver       = Math.max(0, combinedContributed - combinedIraLimit);
+
+    // Roth eligibility (based on MAGI)
+    let rothAllowed, rothStatus, rothPct;
+    if (magi <= po.start) {
+      rothAllowed = ROTH_LIMIT;
+      rothStatus  = 'full';
+      rothPct     = 100;
+    } else if (magi >= po.end) {
+      rothAllowed = 0;
+      rothStatus  = 'none';
+      rothPct     = 0;
+    } else {
+      const phaseRange = po.end - po.start;
+      const overStart  = magi - po.start;
+      rothPct     = Math.max(0, Math.round((1 - overStart / phaseRange) * 100));
+      let reduced = Math.floor((1 - overStart / phaseRange) * ROTH_LIMIT / 10) * 10;
+      if (reduced > 0 && reduced < 200) reduced = 200;
+      rothAllowed = reduced;
+      rothStatus  = 'partial';
+    }
+    const rothHeadroom     = Math.max(0, po.start - magi);
+    const rothStillAllowed = Math.max(0, rothAllowed - rothContrib);  // how much more can go to Roth
+    const rothYear         = ROTH_LIMITS.year || new Date().getFullYear();
+
+    const niitBase    = Math.max(0, agi - TAX_DATA.NIIT_THRESH[filing]);
+    const niit        = Math.min(Math.max(0, totalNetST + totalNetLT), niitBase) * 0.038;
+    const totalFedIT  = fedIT + ltcgTax + niit;
+
+    // SS & Medicare on W-2 wages + prop firm SE income (not on capital gains)
+    const ssWages    = Math.min(wages + propSEBase + bizSEBase, TAX_DATA.SS_BASE);
+    const ssOwed     = ssWages * 0.062;
+    const medOwed    = (wages + propSEBase + bizSEBase) * 0.0145;
+    const addlBase   = Math.max(0, agi - TAX_DATA.ADDL_THRESH[filing]);
+    const addlOwed   = addlBase * 0.009;
+
+    // Net = owed minus already withheld (negative = overpaid, positive = still owe)
+    // Note: prop firm SE tax is never withheld — always fully owed
+    const ssNet      = ssOwed - ssWith;
+    const medNet     = medOwed - medWith;
+    const addlNet    = addlOwed - addlWith;
+    const addlShort  = Math.max(0, addlNet);
+
+    const priorFICA  = priorSS + priorMed + priorAddl;
+    const currFICA   = ssOwed + medOwed + addlOwed;
+
+    // Federal quarterly estimate: income tax safe harbor + SE taxes + Addl Medicare
+    const fedSH      = Math.max(totalFedIT * 0.90, priorFed > 150000 ? priorFed * 1.10 : priorFed);
+    const propSESH   = propNet > 0 ? Math.max(propSETax * 0.90, priorPropTax * 0.153) : 0;
+    const fedEst     = Math.max(0, fedSH - totalFedWith) + propSESH + bizSESH + addlShort;
+    const fedQtrly   = fedEst / 4;
+
+    // ── State income tax ──────────────────────────────────────────────────────
+    const stateKey    = document.getElementById('stateSelect').value;
+    const stateInfo   = STATE_DATA[stateKey] || STATE_DATA['OR'];
+    const stateNoTax  = !!stateInfo.noTax;
+    const stateName   = stateInfo.name;
+
+    // Update UI labels and greyed-out state for no-tax states
+    const swField = document.getElementById('stateWithheldField');
+    const snField = document.getElementById('stateNoteField');
+    const swLabel = document.getElementById('stateWithheldLabel');
+    const swInput = document.getElementById('stateWithheld');
+    if (swLabel) swLabel.textContent = `${stateName} income tax withheld (W-2 box 17)`;
+    if (stateNoTax) {
+      if (swField) { swField.style.opacity='0.4'; swField.style.pointerEvents='none'; }
+      if (snField) { snField.style.display='block'; }
+      const note = document.getElementById('stateNoTaxNote');
+      if (note) note.textContent = stateInfo.note || `${stateName} has no state income tax — no state quarterly payments required.`;
+    } else {
+      if (swField) { swField.style.opacity='1'; swField.style.pointerEvents='auto'; }
+      if (snField) { snField.style.display='none'; }
+    }
+
+    // State income calculation — all gains treated as ordinary income at state level
+    const stateIncome  = wages + totalNetST + totalNetLT + stockLossDeduct + propNet + bizNetIncome - tradingExp;
+    const stateTax     = stateNoTax ? 0 : getStateTax(stateKey, filing, stateIncome);
+    const stateSH      = stateNoTax ? 0 : Math.max(stateTax * 0.90, priorOR);
+    const stateQtrly   = stateNoTax ? 0 : Math.max(0, (stateSH - stWith) / 4);
+
+    const totalQ     = fedQtrly + stateQtrly;
+    const fedEff     = agi > 0 ? (totalFedIT / agi * 100) : 0;
+    const stateEff   = stateIncome > 0 ? (stateTax / stateIncome * 100) : 0;
+    const allTaxes   = totalFedIT + stateTax + propSETax + bizSETax + ssOwed + medOwed + addlOwed;
+
+    // Summary cards
+    document.getElementById('summaryCards').innerHTML = `
+      <div class="metric"><div class="m-label">Stock ST net gains</div><div class="m-value">${fmt(netST)}</div></div>
+      <div class="metric"><div class="m-label">Stock LT net gains</div><div class="m-value">${fmt(netLT)}</div></div>
+      <div class="metric purple"><div class="m-label">Futures net gain (60/40)</div><div class="m-value">${fmt(futNetAfterCarry)}</div></div>
+      <div class="metric amber"><div class="m-label">Prop firm net (SE)</div><div class="m-value">${fmt(propNet)}</div></div>
+      ${bizStructure !== 'none' ? `<div class="metric purple"><div class="m-label">${bizStructure === 'scorp' ? 'S-Corp distribution' : 'Business net income'}</div><div class="m-value">${fmt(bizStructure === 'scorp' ? scorpDistribution : bizNetIncome + bizSEDeduct)}</div></div>` : ''}
+      <div class="metric blue"><div class="m-label">Federal income tax</div><div class="m-value">${fmt(totalFedIT)}</div></div>
+      <div class="metric green"><div class="m-label">${stateName} income tax</div><div class="m-value">${stateNoTax ? 'N/A' : fmt(stateTax)}</div></div>
+      <div class="metric amber"><div class="m-label">All taxes combined</div><div class="m-value">${fmt(allTaxes)}</div></div>
+    `;
+
+    // Roth IRA eligibility panel
+    const rothBarColor  = rothStatus === 'full' ? '#3ecf96' : rothStatus === 'partial' ? '#f0a840' : '#f07070';
+    const rothBg        = rothStatus === 'full' ? 'var(--green-bg)' : rothStatus === 'partial' ? 'var(--amber-bg)' : 'var(--red-bg)';
+    const rothTextColor = rothStatus === 'full' ? 'var(--green-text)' : rothStatus === 'partial' ? 'var(--amber-text)' : 'var(--red-text)';
+
+    // Status label
+    const rothStatusLabel = rothStatus === 'full'
+      ? `Full contribution allowed &mdash; ${fmt(rothHeadroom)} below phase-out`
+      : rothStatus === 'partial'
+      ? `Partial contribution &mdash; in phase-out range ($${(po.start/1000).toFixed(0)}K&ndash;$${(po.end/1000).toFixed(0)}K)`
+      : `No direct contribution allowed &mdash; MAGI exceeds $${(po.end/1000).toFixed(0)}K limit`;
+
+    // Combined limit bar: how much of total IRA limit has been used
+    const combinedUsedPct = Math.min(100, (combinedContributed / combinedIraLimit) * 100);
+    const combinedBarColor = combinedOver > 0 ? '#f07070' : combinedContributed >= combinedIraLimit ? '#3ecf96' : '#60a8e8';
+
+    // Backdoor status
+    const backdoorNote = rothStatus === 'none'
+      ? `You are over the Roth income limit. You can still contribute <strong>${fmt(combinedRemaining > 0 ? combinedRemaining : combinedIraLimit)}</strong> to a traditional IRA (non-deductible) and convert to Roth via backdoor — no income limit on conversions.`
+      : '';
+
+    document.getElementById('rothPanel').innerHTML = `
+      <div style="background:${rothBg};border:1px solid ${rothBarColor}33;border-radius:var(--radius);
+           padding:1rem 1.25rem;margin-bottom:1rem;">
+
+        <!-- Header row -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;
+             gap:1rem;flex-wrap:wrap;margin-bottom:0.85rem;">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px;">
+              <span style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;font-weight:600;
+                   letter-spacing:0.06em;text-transform:uppercase;color:${rothTextColor};">
+                IRA eligibility (${rothYear})
+              </span>
+              <button onclick="fetchRothLimits()" id="rothFetchBtn"
+                style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;font-weight:600;
+                padding:3px 9px;border-radius:5px;border:1px solid ${rothTextColor};
+                background:transparent;color:${rothTextColor};cursor:pointer;opacity:0.8;">
+                ↻ Update limits
+              </button>
+              <span id="rothFetchStatus" style="font-family:'Helvetica Neue',Arial,sans-serif;
+                font-size:10px;color:${rothTextColor};opacity:0.65;"></span>
+            </div>
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;
+                 color:${rothTextColor};margin-bottom:3px;">${rothStatusLabel}</div>
+            ${backdoorNote ? `<div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;
+                 color:${rothTextColor};opacity:0.85;margin-top:4px;">${backdoorNote}</div>` : ''}
+          </div>
+          <div style="text-align:right;white-space:nowrap;">
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;
+                 color:${rothTextColor};opacity:0.7;margin-bottom:3px;">Your MAGI</div>
+            <div style="font-size:1.4rem;letter-spacing:-0.02em;
+                 color:${rothTextColor};font-weight:500;">${fmt(magi)}</div>
+          </div>
+        </div>
+
+        <!-- MAGI phase-out bar -->
+        <div style="margin-bottom:0.85rem;">
+          <div style="display:flex;justify-content:space-between;font-family:'Helvetica Neue',Arial,sans-serif;
+               font-size:10px;color:${rothTextColor};opacity:0.65;margin-bottom:4px;">
+            <span>$0</span>
+            <span>Phase-out $${(po.start/1000).toFixed(0)}K</span>
+            <span>Ineligible $${(po.end/1000).toFixed(0)}K</span>
+          </div>
+          <div style="background:rgba(0,0,0,0.15);border-radius:4px;height:6px;overflow:hidden;">
+            <div style="height:100%;border-radius:4px;background:${rothBarColor};
+                 width:${Math.min(100,(magi/po.end)*100).toFixed(1)}%;transition:width 0.3s;"></div>
+          </div>
+        </div>
+
+        <!-- Contribution limit breakdown grid -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;
+             margin-bottom:0.85rem;">
+
+          <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.65rem 0.75rem;">
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                 color:${rothTextColor};opacity:0.7;margin-bottom:3px;">Base limit</div>
+            <div style="font-size:1rem;color:${rothTextColor};font-weight:500;">${fmt(ROTH_BASE)}</div>
+          </div>
+
+          ${age50plus ? `
+          <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.65rem 0.75rem;">
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                 color:${rothTextColor};opacity:0.7;margin-bottom:3px;">Catch-up (50+)</div>
+            <div style="font-size:1rem;color:${rothTextColor};font-weight:500;">+${fmt(ROTH_CATCHUP)}</div>
+          </div>` : ''}
+
+          <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.65rem 0.75rem;">
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                 color:${rothTextColor};opacity:0.7;margin-bottom:3px;">
+                 ${age50plus ? 'Total limit (50+)' : 'Total limit'}</div>
+            <div style="font-size:1rem;color:${rothTextColor};font-weight:500;">${fmt(ROTH_LIMIT)}</div>
+          </div>
+
+          <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.65rem 0.75rem;">
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                 color:${rothTextColor};opacity:0.7;margin-bottom:3px;">Roth allowed (MAGI)</div>
+            <div style="font-size:1rem;color:${rothTextColor};font-weight:500;">
+              ${rothStatus === 'none' ? '$0 — see backdoor' : fmt(rothAllowed)}</div>
+          </div>
+
+          <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.65rem 0.75rem;">
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                 color:${rothTextColor};opacity:0.7;margin-bottom:3px;">Roth contributed</div>
+            <div style="font-size:1rem;color:${rothTextColor};font-weight:500;">${fmt(rothContrib)}</div>
+          </div>
+
+          <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.65rem 0.75rem;">
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                 color:${rothTextColor};opacity:0.7;margin-bottom:3px;">
+                 ${rothStillAllowed > 0 ? 'Roth still available' : 'Roth maxed'}</div>
+            <div style="font-size:1rem;font-weight:500;color:${rothStillAllowed > 0 ? rothTextColor : '#3ecf96'};">
+              ${rothStillAllowed > 0 ? fmt(rothStillAllowed) : '✓ Maxed'}</div>
+          </div>
+
+        </div>
+
+        <!-- Traditional IRA + combined pool -->
+        <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:0.75rem;">
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;font-weight:600;
+               text-transform:uppercase;letter-spacing:0.05em;color:${rothTextColor};
+               opacity:0.7;margin-bottom:0.5rem;">Combined IRA pool (Roth + Traditional = ${fmt(combinedIraLimit)} max)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr ${rothConverted>0?'1fr':''};gap:8px;margin-bottom:0.6rem;">
+            <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.55rem 0.7rem;">
+              <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                   color:${rothTextColor};opacity:0.7;margin-bottom:2px;">Roth contributed</div>
+              <div style="font-size:0.95rem;color:${rothTextColor};font-weight:500;">${fmt(rothContrib)}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.55rem 0.7rem;">
+              <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                   color:${rothTextColor};opacity:0.7;margin-bottom:2px;">Traditional contributed</div>
+              <div style="font-size:0.95rem;color:${rothTextColor};font-weight:500;">${fmt(tradIraContrib)}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.55rem 0.7rem;">
+              <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                   color:${rothTextColor};opacity:0.7;margin-bottom:2px;">
+                ${combinedOver > 0 ? '⚠ Over limit by' : 'Remaining pool'}</div>
+              <div style="font-size:0.95rem;font-weight:500;
+                   color:${combinedOver > 0 ? '#f07070' : rothTextColor};">
+                ${combinedOver > 0 ? fmt(combinedOver) : fmt(combinedRemaining)}</div>
+            </div>
+            ${rothConverted > 0 ? `
+            <div style="background:rgba(0,0,0,0.15);border-radius:var(--radius);padding:0.55rem 0.7rem;">
+              <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;
+                   color:${rothTextColor};opacity:0.7;margin-bottom:2px;">Backdoor converted</div>
+              <div style="font-size:0.95rem;color:${rothTextColor};font-weight:500;">${fmt(rothConverted)}</div>
+            </div>` : ''}
+          </div>
+
+          <!-- Combined usage bar -->
+          <div style="display:flex;justify-content:space-between;font-family:'Helvetica Neue',Arial,sans-serif;
+               font-size:10px;color:${rothTextColor};opacity:0.6;margin-bottom:4px;">
+            <span>$0 contributed</span>
+            <span>${combinedUsedPct.toFixed(0)}% of ${fmt(combinedIraLimit)} used</span>
+            <span>${fmt(combinedIraLimit)} max</span>
+          </div>
+          <div style="background:rgba(0,0,0,0.2);border-radius:4px;height:8px;overflow:hidden;">
+            <div style="height:100%;border-radius:4px;background:${combinedBarColor};
+                 width:${Math.min(100,combinedUsedPct).toFixed(1)}%;transition:width 0.3s;"></div>
+          </div>
+          ${rothConverted > 0 ? `
+          <div style="margin-top:0.5rem;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;
+               color:${rothTextColor};opacity:0.8;">
+            Backdoor Roth: ${fmt(rothConverted)} converted — report on <strong>Form 8606</strong>.
+            ${tradIraContrib > 0 ? 'Traditional contribution was nondeductible at your income level — basis tracked on Form 8606 so no double tax at conversion.' : ''}
+          </div>` : ''}
+          ${combinedOver > 0 ? `
+          <div style="margin-top:0.5rem;padding:0.5rem 0.75rem;background:rgba(240,112,112,0.15);
+               border-radius:var(--radius);font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;
+               color:#f07070;">
+            ⚠ <strong>Excess contribution:</strong> You have contributed ${fmt(combinedOver)} over the
+            ${fmt(combinedIraLimit)} combined IRA limit. The IRS charges a <strong>6% penalty per year</strong>
+            on excess amounts until withdrawn. Remove the excess by your tax filing deadline to avoid penalties.
+          </div>` : ''}
+        </div>
+
+      </div>
+    `;
+
+    // Helper: colored net status badge
+    function netBadge(net) {
+      if (net > 0)  return `<span style="color:var(--red-text);font-weight:600;">${fmt(net)} still owed</span>`;
+      if (net < 0)  return `<span style="color:var(--green-text);font-weight:600;">${fmt(Math.abs(net))} overpaid</span>`;
+      return `<span style="color:var(--green-text);font-weight:600;">$0 — covered</span>`;
+    }
+
+    // FICA detail columns
+    document.getElementById('ficaDetail').innerHTML = `
+      <div>
+        <div class="col-head fica">Social Security</div>
+        ${brow('Wage base used', fmt(ssWages) + ' of ' + fmt(TAX_DATA.SS_BASE), 'sub')}
+        ${brow('Rate (employee share)', '6.2%', 'sub')}
+        ${brow('Total SS owed', fmt(ssOwed), 'sub')}
+        ${brow('Withheld this year', '&minus;'+fmt(ssWith), 'sub')}
+        ${brow('Prior year paid', fmt(priorSS), 'sub')}
+        <div class="breakdown-row"><span>Net SS balance</span>${netBadge(ssNet)}</div>
+      </div>
+      <div>
+        <div class="col-head fica">Medicare (1.45%)</div>
+        ${brow('Taxable wages', fmt(wages), 'sub')}
+        ${brow('Rate', '1.45%', 'sub')}
+        ${brow('Total Medicare owed', fmt(medOwed), 'sub')}
+        ${brow('Withheld this year', '&minus;'+fmt(medWith), 'sub')}
+        ${brow('Prior year paid', fmt(priorMed), 'sub')}
+        <div class="breakdown-row"><span>Net Medicare balance</span>${netBadge(medNet)}</div>
+      </div>
+      <div>
+        <div class="col-head fica">Additional Medicare (0.9%)</div>
+        ${brow('Income above threshold', fmt(addlBase), 'sub')}
+        ${brow('Rate', '0.9%', 'sub')}
+        ${brow('Total Addl. Medicare owed', fmt(addlOwed), 'sub')}
+        ${brow('Withheld this year', '&minus;'+fmt(addlWith), 'sub')}
+        ${brow('Prior year paid', fmt(priorAddl), 'sub')}
+        <div class="breakdown-row"><span>Net Addl. Medicare balance</span>${netBadge(addlNet)}</div>
+      </div>
+    `;
+
+    // FICA totals row + alert
+    const ficaAlertEl = document.getElementById('ficaAlert');
+    let ficaHtml = `
+      <div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid var(--border);
+           display:flex;justify-content:space-between;align-items:baseline;
+           font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;">
+        <span style="color:var(--text-2);">Total FICA: prior year ${fmt(priorFICA)} &rarr; estimated this year</span>
+        <span style="font-weight:600;">${fmt(currFICA)}</span>
+      </div>`;
+    if (addlShort > 0) {
+      ficaHtml += `<div class="alert-box">&#9432;&nbsp; Additional Medicare Tax shortfall of <strong>${fmt(addlShort)}</strong> included in your quarterly federal estimate below. Pay via IRS estimated tax (Form 1040-ES), not through payroll.</div>`;
+    }
+    ficaAlertEl.innerHTML = ficaHtml;
+
+    // Fed + OR income tax detail
+    document.getElementById('twoCol').innerHTML = `
+      <div>
+        <div class="col-head fed">Federal income tax detail</div>
+        ${brow('Stock ST net gain (ordinary)', fmt(netST), 'sub')}
+        ${brow('Stock LT net gain (pref. rate)', fmt(netLT), 'sub')}
+        ${stockLossDeduct < 0 ? brow('Stock loss deduction (cap $3K)', fmt(stockLossDeduct), 'sub') : ''}
+        ${brow('Futures ST portion (40%)', fmt(Math.max(0,futST)), 'sub')}
+        ${brow('Futures LT portion (60%)', fmt(Math.max(0,futLT)), 'sub')}
+        ${propNet > 0 ? brow('Prop firm net income (ordinary)', fmt(propNet), 'sub') : ''}
+        ${propNet > 0 ? brow('SE tax deduction (½ of SE tax)', '&minus;'+fmt(propSEDeduct), 'sub') : ''}
+        ${propNet > 0 ? brow('Prop firm SE tax (15.3%)', fmt(propSETax), 'sub') : ''}
+        ${bizStructure === 'soleProp' && bizNetIncome > 0 ? brow('Business net income (ordinary)', fmt(bizNetIncome + bizSEDeduct), 'sub') : ''}
+        ${bizStructure === 'soleProp' && bizNetIncome > 0 ? brow('Business SE tax deduction', '&minus;'+fmt(bizSEDeduct), 'sub') : ''}
+        ${bizStructure === 'soleProp' && bizSETax > 0 ? brow('Business SE tax (15.3%)', fmt(bizSETax), 'sub') : ''}
+        ${bizStructure === 'scorp' && scorpSalary > 0 ? brow('S-Corp salary (W-2, in wages above)', fmt(scorpSalary), 'sub') : ''}
+        ${bizStructure === 'scorp' && scorpDistribution > 0 ? brow('S-Corp distribution (no SE tax)', fmt(scorpDistribution), 'sub') : ''}
+        ${brow('Ordinary income tax', fmt(fedIT))}
+        ${brow('Long-term cap gains tax', fmt(ltcgTax))}
+        ${brow('Net investment income (3.8%)', fmt(niit))}
+        ${brow('Effective income tax rate', fedEff.toFixed(1)+'%')}
+        ${brow('W-2 income tax withheld', '&minus;'+fmt(fedWith))}
+        ${bizExtraFedWith > 0 ? brow('S-Corp W-2 withheld', '&minus;'+fmt(bizExtraFedWith), 'sub') : ''}
+        ${brow('Remaining via estimates', fmt(Math.max(0, totalFedIT - totalFedWith) + addlShort))}
+      </div>
+      <div>
+        <div class="col-head or">${stateName} income tax detail</div>
+        ${stateNoTax
+          ? `${brow('No state income tax', 'N/A')}
+             ${stateInfo.note ? `<div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--text-3);padding-top:5px;">${stateInfo.note}</div>` : ''}`
+          : `${brow('All gains taxed as ordinary', fmt(stateTax))}
+             ${brow('Effective state rate', stateEff.toFixed(1)+'%')}
+             ${brow('W-2 income tax withheld', '&minus;'+fmt(stWith))}
+             ${brow('Remaining via estimates', fmt(Math.max(0, stateTax - stWith)))}`
+        }
+      </div>
+    `;
+
+    // ── Date-aware quarterly schedule ──────────────────────────────────────
+    const today = new Date();
+    // yr already declared at top of runCalc
+
+    const Q_DATES = [
+      { label:'Q1', period:'Jan – Mar', dueStr:'Apr 15',  due: new Date(yr, 3, 15)  },
+      { label:'Q2', period:'Apr – May', dueStr:'Jun 16',  due: new Date(yr, 5, 16)  },
+      { label:'Q3', period:'Jun – Aug', dueStr:'Sep 15',  due: new Date(yr, 8, 15)  },
+      { label:'Q4', period:'Sep – Dec', dueStr:'Jan 15',  due: new Date(yr+1, 0, 15)}
+    ];
+
+    // Per-quarter paid amounts (independent — do not pool)
+    const paidFed = [v('paidQ1Fed'), v('paidQ2Fed'), v('paidQ3Fed'), v('paidQ4Fed')];
+    const paidOr  = [v('paidQ1Or'),  v('paidQ2Or'),  v('paidQ3Or'),  v('paidQ4Or')];
+
+    // Annual totals — what still needs to be paid via quarterly estimates (after withholding)
+    const totalFedNeeded   = fedEst;
+    const totalOrNeeded    = stateNoTax ? 0 : Math.max(0, stateSH - stWith);
+
+    // Each quarter's independent target (recalculates with income changes)
+    const qFedTarget = totalFedNeeded / 4;
+    const qOrTarget  = totalOrNeeded  / 4;
+
+    // Per-quarter net remaining: positive = still owed, negative = overpaid this quarter
+    const qFedNet = paidFed.map(p => qFedTarget - p);
+    const qOrNet  = paidOr.map(p  => qOrTarget  - p);
+
+    // Navigation
+    const nextQIdx  = Q_DATES.findIndex(q => today <= q.due);
+    const openCount = Q_DATES.filter(q => today <= q.due).length;
+
+    // Summary totals
+    const totalPaid      = paidFed.reduce((a,b)=>a+b,0) + paidOr.reduce((a,b)=>a+b,0);
+    const totalNeeded    = totalFedNeeded + totalOrNeeded;
+    const totalRemaining = Q_DATES.reduce((sum,q,i) =>
+      today <= q.due ? sum + Math.max(0, qFedNet[i]) + Math.max(0, qOrNet[i]) : sum, 0);
+
+    // Safe harbor note — explain when prior year tax is driving the estimate
+    const safeHarborDriven    = priorFed > 0 && fedSH > totalFedIT * 0.90 && Math.max(0, fedSH - totalFedWith) > 0;
+    const orSafeHarborDriven  = !stateNoTax && priorOR > 0 && stateSH > stateTax * 0.90 && Math.max(0, stateSH - stWith) > 0;
+    let shNote = '';
+    if ((safeHarborDriven || orSafeHarborDriven) && totalFedNeeded + totalOrNeeded > 0) {
+      shNote = `<div class="note fed-note" style="margin-bottom:0.75rem;">
+        <strong>Why do I still owe if my withholding covers my taxes?</strong><br>
+        Your W-2 withholding covers your <em>current year</em> tax liability — but the IRS safe harbor rule
+        requires you to also pay at least 100% of your <em>prior year</em> total tax
+        ${priorFed > 150000 ? '(110% since prior AGI exceeded $150K)' : ''} to avoid underpayment penalties.
+        ${safeHarborDriven ? `Your prior year federal tax was ${fmt(priorFed)}, and your current withholding of ${fmt(totalFedWith)} doesn't fully cover that threshold — the ${fmt(Math.max(0,fedSH-totalFedWith))} difference is what the quarterly schedule shows as owed.` : ''}
+        ${orSafeHarborDriven ? ` ${stateName}: prior year tax was ${fmt(priorOR)}, withholding of ${fmt(stWith)} leaves a ${fmt(Math.max(0,stateSH-stWith))} gap.` : ''}
+        If you prefer to use the <em>90% of current year</em> method instead, set your prior year tax fields to $0.
+      </div>`;
+    }
+    document.getElementById('safeHarborNote').innerHTML = shNote;
+
+    // Dynamic state note
+    const stateNoteEl = document.getElementById('stateQtrNote');
+    if (stateNoteEl) {
+      stateNoteEl.innerHTML = stateNoTax
+        ? `<strong>${stateName}:</strong> ${stateInfo.note || 'No state income tax — no state quarterly payments required.'} State quarterly payment fields remain visible but show $0.`
+        : `<strong>${stateName} safe harbor:</strong> Pay 100% of prior year state tax or 90% of current year estimate to avoid underpayment penalties. All capital gains are taxed as ordinary income at the state level — the 60/40 futures rule does not apply in any state.`;
+    }
+
+    // Build grid
+    let gridHtml = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;">';
+    Q_DATES.forEach((q, i) => {
+      const isPast   = today > q.due;
+      const isNext   = i === nextQIdx;
+      const fedNet   = qFedNet[i];
+      const orNet    = qOrNet[i];
+      const totalNet = fedNet + orNet;
+      const paidQ    = paidFed[i] + paidOr[i];
+
+      let cardBg      = 'var(--surface2)';
+      let borderStyle = '1px solid var(--border)';
+      let qtrColor    = 'var(--text-2)';
+      let statusTag   = '';
+
+      if (isPast) {
+        cardBg   = '#111';
+        qtrColor = 'var(--text-3)';
+        if (paidQ === 0) {
+          statusTag = `<div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;color:var(--red-text);font-weight:600;margin-top:5px;">⚠ No payment recorded</div>`;
+        } else if (totalNet > 50) {
+          statusTag = `<div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;color:var(--amber-text);font-weight:600;margin-top:5px;">Underpaid ${fmt(totalNet)}</div>`;
+        } else if (totalNet < -50) {
+          statusTag = `<div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;color:var(--green-text);font-weight:600;margin-top:5px;">Overpaid ${fmt(Math.abs(totalNet))}</div>`;
+        } else {
+          statusTag = `<div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;color:var(--green-text);font-weight:600;margin-top:5px;">✓ Covered</div>`;
+        }
+      } else if (isNext) {
+        cardBg      = 'var(--blue-bg)';
+        borderStyle = '2px solid #378ADD';
+        statusTag   = `<div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;color:var(--blue-text);font-weight:600;margin-top:5px;">⬆ Due next</div>`;
+      } else {
+        if (totalNet < -50) {
+          statusTag = `<div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;color:var(--green-text);font-weight:600;margin-top:5px;">Overpaid ${fmt(Math.abs(totalNet))}</div>`;
+        }
+      }
+
+      gridHtml += `
+        <div style="background:${cardBg};border:${borderStyle};border-radius:var(--radius);
+             padding:1rem 0.75rem;text-align:center;">
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;font-weight:600;
+               color:${qtrColor};letter-spacing:0.04em;">${q.label}</div>
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;color:var(--text-3);
+               margin:3px 0 8px;">${q.period} &bull; Due ${q.dueStr}</div>
+          ${isPast ? `
+            <div style="font-size:0.95rem;color:var(--text-3);">${fmt(paidFed[i])}</div>
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:9px;color:var(--text-3);
+                 text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;">fed paid</div>
+            <div style="font-size:0.95rem;color:var(--text-3);">${fmt(paidOr[i])}</div>
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:9px;color:var(--text-3);
+                 text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;">or paid</div>
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:9px;color:var(--text-3);
+                 margin-top:4px;">target was ${fmt(qFedTarget+qOrTarget)}</div>
+          ` : `
+            <div style="font-size:1rem;color:var(--blue-text);margin-bottom:1px;">${fmt(Math.max(0,fedNet))}</div>
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:9px;color:var(--text-3);
+                 text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;">
+                 ${paidFed[i]>0 ? 'fed still owed' : 'federal'+(addlShort>0?' + addl. med.':'')}</div>
+            <div style="font-size:1rem;color:var(--green-text);margin-bottom:1px;">${fmt(Math.max(0,orNet))}</div>
+            <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:9px;color:var(--text-3);
+                 text-transform:uppercase;letter-spacing:0.05em;">
+                 ${paidOr[i]>0 ? 'state still owed' : stateNoTax ? 'no state tax' : stateKey.toLowerCase()}</div>
+            ${paidQ>0 ? `
+              <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:9px;color:var(--text-3);
+                   margin-top:5px;">paid ${fmt(paidQ)} of ${fmt(qFedTarget+qOrTarget)}</div>
+            ` : ''}
+          `}
+          ${statusTag}
+        </div>`;
+    });
+    gridHtml += '</div>';
+    document.getElementById('quarterGrid').innerHTML = gridHtml;
+
+    // Summary banner
+    const nextQ        = nextQIdx >= 0 ? Q_DATES[nextQIdx] : null;
+    const nextDueTotal = nextQ ? Math.max(0, qFedNet[nextQIdx]) + Math.max(0, qOrNet[nextQIdx]) : 0;
+    const nextDueLabel = nextQ
+      ? `${nextQ.label} due ${nextQ.dueStr} &mdash; still owed`
+      : 'All quarters complete for this tax year';
+
+    document.getElementById('totalBanner').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0.75rem;">
+        <div style="background:var(--blue-bg);border:1px solid rgba(96,168,232,0.2);border-radius:var(--radius);
+             padding:1rem 1.25rem;display:flex;flex-direction:column;gap:4px;">
+          <span style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:var(--blue-text);">${nextDueLabel}</span>
+          <span style="font-size:1.5rem;letter-spacing:-0.03em;color:var(--text);">${fmt(nextDueTotal)}</span>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);
+             padding:1rem 1.25rem;display:flex;flex-direction:column;gap:4px;">
+          <span style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:var(--text-2);">Remaining across open quarters (${openCount} left)</span>
+          <span style="font-size:1.5rem;letter-spacing:-0.03em;color:var(--text);">${fmt(totalRemaining)}</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:0.65rem 0.85rem;">
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--text-3);margin-bottom:3px;">Annual target (fed + OR)</div>
+          <div style="font-size:1rem;font-weight:500;color:var(--text);">${fmt(totalNeeded)}</div>
+        </div>
+        <div style="background:var(--green-bg);border:1px solid rgba(62,207,150,0.2);border-radius:var(--radius);padding:0.65rem 0.85rem;">
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--green-text);margin-bottom:3px;">Total paid so far</div>
+          <div style="font-size:1rem;font-weight:500;color:var(--green-text);">${fmt(totalPaid)}</div>
+        </div>
+        <div style="background:var(--amber-bg);border:1px solid rgba(240,168,64,0.2);border-radius:var(--radius);padding:0.65rem 0.85rem;">
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--amber-text);margin-bottom:3px;">Still owed (open qtrs)</div>
+          <div style="font-size:1rem;font-weight:500;color:var(--amber-text);">${fmt(totalRemaining)}</div>
+        </div>
+      </div>
+    `;
+
+  }
+
+  // ── Persistence via localStorage ──────────────────────────────────────────
+  const STORE_KEY = 'dtCalc_v1';
+
+  // All field IDs to persist (inputs + select)
+  const FIELD_IDS = [
+    'filing',
+    'stateSelect',
+    'age50plus',
+    'otherIncome','fedWithheld','stateWithheld',
+    'propPayouts','propExpenses','priorPropTax',
+    'bizStructure','bizGrossIncome','bizExpenses','priorBizProfit',
+    'scorpSalary','scorpSalaryFedWith','scorpDistribution','priorScorpProfit',
+    'rothContrib','tradIraContrib','rothConverted',
+    'ssWithheld','medicareWithheld','addlMedWithheld',
+    'priorSS','priorMedicare','priorAddlMed',
+    'priorFedTax','priorStateTax',
+    'stNet','ltNet','stockLossCarry',
+    'futNet','futLossCarry',
+    'tradingExp',
+    'paidQ1Fed','paidQ2Fed','paidQ3Fed','paidQ4Fed',
+    'paidQ1Or','paidQ2Or','paidQ3Or','paidQ4Or'
+  ];
+
+  function saveValues() {
+    const data = {};
+    FIELD_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.value;
+    });
+    data._savedAt = new Date().toISOString();
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+    updateSaveStatus(data._savedAt);
+  }
+
+  function loadValues() {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) { updateSaveStatus(null); return false; }
+    try {
+      const data = JSON.parse(raw);
+      FIELD_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && data[id] !== undefined) el.value = data[id];
+      });
+      updateSaveStatus(data._savedAt);
+      return true;
+    } catch(e) { updateSaveStatus(null); return false; }
+  }
+
+
+  function updateSaveStatus(isoDate) {
+    const el = document.getElementById('saveStatus');
+    if (!isoDate) {
+      el.innerHTML = '&#9675; No saved data &mdash; values will reset on close';
+      el.style.color = 'var(--text-3)';
+      return;
+    }
+    const d = new Date(isoDate);
+    const stamp = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+                + ' at ' + d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+    el.innerHTML = `&#10003; Auto-saved &mdash; last saved ${stamp}`;
+    el.style.color = 'var(--green-text)';  }
+
+  // calc() is the public function called by oninput/onchange in the HTML
+  function calc() { runCalc(); saveValues(); }
+
+  // ── Lock / Unlock system ─────────────────────────────────────────────────
+  const LOCK_KEY = 'dtCalc_locks_v1';
+  let lockedFields = new Set();
+
+  function toggleLock(fieldId) {
+    lockedFields.has(fieldId) ? lockedFields.delete(fieldId) : lockedFields.add(fieldId);
+    applyLocks();
+    saveLocks();
+  }
+
+  function applyLocks() {
+    document.querySelectorAll('.field[id]').forEach(f => {
+      const isLocked = lockedFields.has(f.id);
+      f.classList.toggle('locked', isLocked);
+      const btn = f.querySelector('.lock-btn');
+      if (btn) btn.textContent = isLocked ? '🔒' : '🔓';
+      f.querySelectorAll('input[type="number"]').forEach(inp => { inp.readOnly = isLocked; });
+      f.querySelectorAll('select').forEach(sel => { sel.disabled = isLocked; });
+    });
+    const allFields = [...document.querySelectorAll('.field[id]')];
+    const allLocked = allFields.length > 0 && allFields.every(f => lockedFields.has(f.id));
+    const btn = document.getElementById('lockAllBtn');
+    if (btn) btn.textContent = allLocked ? '🔒 Unlock all fields' : '🔓 Lock all fields';
+  }
+
+  function toggleLockAll() {
+    const allFields = document.querySelectorAll('.field[id]');
+    const allLocked = [...allFields].every(f => lockedFields.has(f.id));
+    if (allLocked) { lockedFields.clear(); }
+    else { allFields.forEach(f => lockedFields.add(f.id)); }
+    applyLocks();
+    saveLocks();
+  }
+
+  function saveLocks() {
+    try { localStorage.setItem(LOCK_KEY, JSON.stringify([...lockedFields])); } catch(e){}
+  }
+
+  function loadLocks() {
+    try {
+      const s = localStorage.getItem(LOCK_KEY);
+      if (s) lockedFields = new Set(JSON.parse(s));
+    } catch(e){}
+    applyLocks();
+  }
+
+  // Give unlabelled .field divs an id based on their input/select child
+  function autoWrapFields() {
+    document.querySelectorAll('.field').forEach((f, i) => {
+      if (f.id) return;
+      const inp = f.querySelector('input[type="number"]');
+      const sel = f.querySelector('select');
+      if (inp?.id)  f.id = `f_${inp.id}`;
+      else if (sel?.id) f.id = `f_${sel.id}`;
+      else if (inp || sel) f.id = `f_auto_${i}`;
+    });
+  }
+
+  // Inject a lock button into every .field[id] that doesn't already have one
+  function injectLockButtons() {
+    document.querySelectorAll('.field[id]').forEach(f => {
+      if (f.querySelector('.lock-btn')) return;
+      const btn = document.createElement('button');
+      btn.className = 'lock-btn';
+      btn.title = 'Lock / unlock this field';
+      btn.textContent = '🔓';
+      btn.type = 'button';
+      btn.setAttribute('onclick', `toggleLock('${f.id}')`);
+      f.prepend(btn);
+    });
+  }
+
+  function clearSaved() {
+    if (!confirm('Clear all saved values and reset the form?')) return;
+    localStorage.removeItem(STORE_KEY);
+    localStorage.removeItem(LOCK_KEY);
+    lockedFields.clear();
+    FIELD_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === 'SELECT') {
+        if (id === 'age50plus')         el.value = 'no';
+        else if (id === 'stateSelect')  el.value = 'OR';
+        else if (id === 'bizStructure') el.value = 'none';
+        else el.value = 'single';
+      }
+      else el.value = '0';
+    });
+    applyLocks();
+    updateSaveStatus(null);
+    toggleBizFields();
+    runCalc();
+  }
+
+  // On page load
+  loadValues();
+  autoWrapFields();
+  injectLockButtons();
+  toggleBizFields();
+  loadLocks();
+  runCalc();
+</script>
+</body>
+</html>
